@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import time
-from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING
 
 from insightai.domain.exceptions import SQLGenerationError
@@ -21,6 +20,8 @@ from insightai.infrastructure.config.settings import Settings, get_settings
 from insightai.infrastructure.logging.setup import get_logger
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from insightai.application.use_cases.generate_answer import GenerateAnswerUseCase
     from insightai.application.use_cases.generate_sql import GenerateSQLUseCase
     from insightai.application.use_cases.run_query import RunQueryUseCase

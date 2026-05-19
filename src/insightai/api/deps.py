@@ -7,8 +7,8 @@ from typing import TYPE_CHECKING, cast
 from fastapi import Request
 
 from insightai.application.use_cases.ask import AskUseCase
-from insightai.application.use_cases.chat_session import ChatSessionUseCase
 from insightai.application.use_cases.build_schema_context import BuildSchemaContextUseCase
+from insightai.application.use_cases.chat_session import ChatSessionUseCase
 from insightai.application.use_cases.generate_answer import GenerateAnswerUseCase
 from insightai.application.use_cases.generate_sql import GenerateSQLUseCase
 from insightai.application.use_cases.health_check import HealthCheckUseCase

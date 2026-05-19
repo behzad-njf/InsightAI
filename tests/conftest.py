@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+pytest_plugins = ["tests.integration.chat_product_fixtures"]
+
 from collections.abc import Generator
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -67,12 +69,16 @@ def api_client(
     """FastAPI test client with AI/DB startup mocked."""
     from insightai.main import create_app
 
-    with patch("insightai.main.get_settings", return_value=test_settings), patch(
-        "insightai.main.build_ai_components",
-        return_value=mock_ai_components,
-    ), patch(
-        "insightai.main.build_database_components",
-        return_value=mock_database_components,
+    with (
+        patch("insightai.main.get_settings", return_value=test_settings),
+        patch(
+            "insightai.main.build_ai_components",
+            return_value=mock_ai_components,
+        ),
+        patch(
+            "insightai.main.build_database_components",
+            return_value=mock_database_components,
+        ),
     ):
         app = create_app()
         with TestClient(app) as client:
@@ -87,12 +93,16 @@ def api_client_no_database(
     """API client simulating missing database configuration at startup."""
     from insightai.main import create_app
 
-    with patch("insightai.main.get_settings", return_value=test_settings), patch(
-        "insightai.main.build_ai_components",
-        return_value=mock_ai_components,
-    ), patch(
-        "insightai.main.build_database_components",
-        side_effect=ConfigurationError("database not configured"),
+    with (
+        patch("insightai.main.get_settings", return_value=test_settings),
+        patch(
+            "insightai.main.build_ai_components",
+            return_value=mock_ai_components,
+        ),
+        patch(
+            "insightai.main.build_database_components",
+            side_effect=ConfigurationError("database not configured"),
+        ),
     ):
         app = create_app()
         with TestClient(app) as client:

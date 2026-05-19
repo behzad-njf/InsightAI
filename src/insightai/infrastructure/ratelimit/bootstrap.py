@@ -4,11 +4,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import TYPE_CHECKING
 
-from insightai.domain.ports.rate_limiter import IRateLimiter
-from insightai.infrastructure.config.settings import Settings
 from insightai.infrastructure.logging.setup import get_logger
 from insightai.infrastructure.ratelimit.memory_limiter import MemoryRateLimiter
+
+if TYPE_CHECKING:
+    from insightai.domain.ports.rate_limiter import IRateLimiter
+    from insightai.infrastructure.config.settings import Settings
 
 logger = get_logger(__name__)
 

@@ -134,9 +134,7 @@ class SchemaMarkdownParser:
                 while i < len(lines) and not lines[i].strip().startswith("```"):
                     sql_lines.append(lines[i])
                     i += 1
-                patterns.append(
-                    JoinPatternMetadata(title=title, sql="\n".join(sql_lines).strip())
-                )
+                patterns.append(JoinPatternMetadata(title=title, sql="\n".join(sql_lines).strip()))
                 i += 1
                 continue
             i += 1

@@ -192,9 +192,7 @@ def render_answer_generation_messages(
     """
     settings = settings or get_settings()
     row_limit = (
-        max_display_rows
-        if max_display_rows is not None
-        else settings.answer_max_prompt_rows
+        max_display_rows if max_display_rows is not None else settings.answer_max_prompt_rows
     )
     prompts = bundle or load_answer_generation_prompts(settings)
     return _render_answer_generation_messages_from_bundle(
@@ -222,9 +220,7 @@ def render_answer_generation_stream_messages(
     """
     settings = settings or get_settings()
     row_limit = (
-        max_display_rows
-        if max_display_rows is not None
-        else settings.answer_max_prompt_rows
+        max_display_rows if max_display_rows is not None else settings.answer_max_prompt_rows
     )
     prompts = bundle or load_answer_generation_stream_prompts(settings)
     return _render_answer_generation_messages_from_bundle(

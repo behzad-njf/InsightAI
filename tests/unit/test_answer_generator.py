@@ -259,9 +259,10 @@ async def test_generate_stream_yields_tokens_and_done(sample_result) -> None:
 
     events = [event async for event in generator.generate_stream(request)]
     assert [e.kind for e in events] == ["token", "token", "done"]
-    assert join_stream_text(
-        [LLMStreamChunk(text=e.text_delta) for e in events if e.text_delta]
-    ) == "There are 2 classrooms."
+    assert (
+        join_stream_text([LLMStreamChunk(text=e.text_delta) for e in events if e.text_delta])
+        == "There are 2 classrooms."
+    )
     assert events[-1].result is not None
     assert events[-1].result.answer == "There are 2 classrooms."
     assert events[-1].result.row_count == 2
@@ -292,13 +293,15 @@ async def test_generate_stream_uses_stream_system_prompt(sample_result) -> None:
         settings,
         stream_prompt_bundle=stream_bundle,
     )
-    await anext(generator.generate_stream(
-        AnswerGenerationRequest(
-            question="Q?",
-            sql="SELECT 1",
-            query_result=sample_result,
+    await anext(
+        generator.generate_stream(
+            AnswerGenerationRequest(
+                question="Q?",
+                sql="SELECT 1",
+                query_result=sample_result,
+            )
         )
-    ))
+    )
     assert captured[0].metadata == {"task": "answer_generation_stream"}
     assert "plain natural language" in captured[0].messages[0].content.lower()
 

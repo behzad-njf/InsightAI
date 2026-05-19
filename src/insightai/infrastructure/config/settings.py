@@ -133,7 +133,7 @@ class Settings(BaseSettings):
         default=200,
         ge=2,
         le=10_000,
-        description="Maximum messages stored per session (user + assistant pairs count separately).",
+        description="Max messages per session (user and assistant messages count separately).",
     )
     chat_session_list_default_limit: int = Field(
         default=100,
@@ -231,18 +231,16 @@ class Settings(BaseSettings):
             msg = "INSIGHTAI_DEBUG must be false in production."
             raise ValueError(msg)
         if self.env == AppEnvironment.PRODUCTION and self.api_auth_mode == ApiAuthMode.NONE:
-            msg = (
-                "INSIGHTAI_API_AUTH_MODE must be 'api_key' or 'jwt' in production "
-                "(not 'none')."
-            )
+            msg = "INSIGHTAI_API_AUTH_MODE must be 'api_key' or 'jwt' in production (not 'none')."
             raise ValueError(msg)
         if self.api_auth_mode == ApiAuthMode.API_KEY and not self.parsed_api_keys():
             msg = "INSIGHTAI_API_KEYS is required when INSIGHTAI_API_AUTH_MODE=api_key."
             raise ValueError(msg)
-        if self.api_auth_mode == ApiAuthMode.JWT:
-            if not self.jwt_secret or not self.jwt_secret.strip():
-                msg = "INSIGHTAI_JWT_SECRET is required when INSIGHTAI_API_AUTH_MODE=jwt."
-                raise ValueError(msg)
+        if self.api_auth_mode == ApiAuthMode.JWT and (
+            not self.jwt_secret or not self.jwt_secret.strip()
+        ):
+            msg = "INSIGHTAI_JWT_SECRET is required when INSIGHTAI_API_AUTH_MODE=jwt."
+            raise ValueError(msg)
         if self.env == AppEnvironment.PRODUCTION and not self.rate_limit_enabled:
             msg = "INSIGHTAI_RATE_LIMIT_ENABLED must be true in production."
             raise ValueError(msg)
@@ -318,9 +316,10 @@ class Settings(BaseSettings):
         Return SQLAlchemy URL for the requested connection mode.
 
         Priority:
-        1. DB_* components when a password is set (avoids broken manual URLs with ``&``, ``#``, etc.)
-        2. INSIGHTAI_DATABASE_READONLY_URL / INSIGHTAI_DATABASE_URL (normalized + TrustServerCertificate for MSSQL)
-        3. DB_* components without password (user only)
+        1. DB_* components when a password is set (avoids broken manual URLs).
+        2. INSIGHTAI_DATABASE_READONLY_URL / INSIGHTAI_DATABASE_URL
+           (normalized; TrustServerCertificate for MSSQL).
+        3. DB_* components without password (user only).
         """
         explicit = self.database_readonly_url if readonly else self.database_url
         password = self.db_readonly_password if readonly else self.db_password

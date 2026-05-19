@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING
 
 from insightai.domain.models.answer import (
@@ -12,6 +11,8 @@ from insightai.domain.models.answer import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from insightai.domain.ports.answer_generator import IAnswerGenerator
     from insightai.infrastructure.config.settings import Settings
 

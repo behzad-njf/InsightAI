@@ -58,9 +58,7 @@ class SQLGenerateResponse(BaseModel):
             tables_used=result.sql.tables_used,
             schema_table_names=result.schema_context.table_names,
             context_markdown=result.schema_context.context_markdown,
-            join_pattern_titles=[
-                pattern.title for pattern in result.schema_context.join_patterns
-            ],
+            join_pattern_titles=[pattern.title for pattern in result.schema_context.join_patterns],
             usage=TokenUsageSchema(
                 prompt_tokens=result.sql.usage.prompt_tokens,
                 completion_tokens=result.sql.usage.completion_tokens,

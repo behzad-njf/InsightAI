@@ -24,15 +24,9 @@ from tests.conftest import make_settings
 def run_query() -> RunQueryUseCase:
     engine = create_engine("sqlite:///:memory:")
     with engine.begin() as conn:
-        conn.execute(
-            text("CREATE TABLE accounts_user (id INTEGER PRIMARY KEY, email TEXT)")
-        )
-        conn.execute(
-            text("INSERT INTO accounts_user (id, email) VALUES (1, 'a@test.com')")
-        )
-        conn.execute(
-            text("INSERT INTO accounts_user (id, email) VALUES (2, 'b@test.com')")
-        )
+        conn.execute(text("CREATE TABLE accounts_user (id INTEGER PRIMARY KEY, email TEXT)"))
+        conn.execute(text("INSERT INTO accounts_user (id, email) VALUES (1, 'a@test.com')"))
+        conn.execute(text("INSERT INTO accounts_user (id, email) VALUES (2, 'b@test.com')"))
     settings = make_settings(sql_max_rows=1000)
     defaults = settings.get_query_execution_options()
     validator = create_sql_safety_validator(kind=DatabaseKind.SQLITE, settings=settings)

@@ -6,17 +6,15 @@ Exercises the full protected API stack (auth/rate-limit variants in dedicated te
 
 from __future__ import annotations
 
+import pytest
+
 from insightai.infrastructure.schema.loader import clear_schema_repository_cache
-from tests.integration.sse_helpers import parse_sse
 from tests.fixtures.sql_generation_samples import CLASSROOM_QUESTION
 from tests.integration.chat_product_fixtures import (
     build_product_chat_client,
     dispose_product_client,
-    product_chat_client,
-    product_chat_client_auth,
 )
-
-import pytest
+from tests.integration.sse_helpers import parse_sse
 
 pytestmark = pytest.mark.integration
 
@@ -214,10 +212,7 @@ def test_product_e2e_auth_and_rate_limit() -> None:
     try:
         clear_schema_repository_cache()
         for _ in range(2):
-            assert (
-                client.post("/api/v1/chat/sessions", headers=headers, json={}).status_code
-                == 201
-            )
+            assert client.post("/api/v1/chat/sessions", headers=headers, json={}).status_code == 201
         blocked = client.post("/api/v1/chat/sessions", headers=headers, json={})
         assert blocked.status_code == 429
         assert blocked.json()["error"] == "RATE_LIMIT_EXCEEDED"

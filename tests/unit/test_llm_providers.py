@@ -226,8 +226,9 @@ def test_llamaindex_framework_delegates() -> None:
     mock_provider = MagicMock()
     mock_provider.provider_kind = LLMProviderKind.GROQ
 
-    with patch("llama_index.llms.openai.OpenAI", return_value=MagicMock()), patch(
-        "llama_index.core.Settings"
+    with (
+        patch("llama_index.llms.openai.OpenAI", return_value=MagicMock()),
+        patch("llama_index.core.Settings"),
     ):
         framework = create_ai_framework(mock_provider, settings)
 
@@ -265,11 +266,13 @@ def test_build_ai_components() -> None:
         groq_api_key="gsk-test",
         ai_framework=AIFrameworkKind.LLAMAINDEX,
     )
-    with patch(
-        "insightai.infrastructure.ai.providers.groq_provider.Groq",
-        return_value=MagicMock(),
-    ), patch("llama_index.llms.openai.OpenAI", return_value=MagicMock()), patch(
-        "llama_index.core.Settings"
+    with (
+        patch(
+            "insightai.infrastructure.ai.providers.groq_provider.Groq",
+            return_value=MagicMock(),
+        ),
+        patch("llama_index.llms.openai.OpenAI", return_value=MagicMock()),
+        patch("llama_index.core.Settings"),
     ):
         components = build_ai_components(settings)
 

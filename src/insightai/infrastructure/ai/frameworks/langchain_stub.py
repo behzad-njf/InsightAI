@@ -36,7 +36,4 @@ class LangChainFrameworkStub(IAIFramework):
 
     @staticmethod
     def _not_implemented_message() -> str:
-        return (
-            "LangChain framework is not implemented yet. "
-            "Set INSIGHTAI_AI_FRAMEWORK=llamaindex."
-        )
+        return "LangChain framework is not implemented yet. Set INSIGHTAI_AI_FRAMEWORK=llamaindex."

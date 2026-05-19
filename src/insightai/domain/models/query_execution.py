@@ -26,7 +26,7 @@ class RunQueryRequest(BaseModel):
     Execute a read-only SQL query.
 
     Provide exactly one of: ``sql``, ``generated_sql``, or ``generate_result``.
-  """
+    """
 
     sql: str | None = Field(
         default=None,
@@ -53,10 +53,7 @@ class RunQueryRequest(BaseModel):
     def validate_sql_source(self) -> Self:
         sources = int(self._has_raw_sql()) + int(self._has_generated_sql())
         if sources == 0:
-            msg = (
-                "Provide one of: sql, generated_sql, or generate_result "
-                "with non-empty SQL."
-            )
+            msg = "Provide one of: sql, generated_sql, or generate_result with non-empty SQL."
             raise ValueError(msg)
         if sources > 1:
             msg = "Provide only one SQL source (sql, generated_sql, or generate_result)."

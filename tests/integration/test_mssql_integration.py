@@ -101,9 +101,6 @@ def test_mssql_invalid_sql_never_executes(mssql_stack) -> None:
 
 def test_mssql_validator_accepts_with_cte_and_top(mssql_stack) -> None:
     _settings, components, _run_query = mssql_stack
-    sql = (
-        "WITH cte AS (SELECT 1 AS n) "
-        "SELECT TOP 5 n FROM cte"
-    )
+    sql = "WITH cte AS (SELECT 1 AS n) SELECT TOP 5 n FROM cte"
     validation = components.validator.validate(sql)
     assert validation.is_valid

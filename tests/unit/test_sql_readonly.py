@@ -15,9 +15,7 @@ def validator() -> SQLReadOnlyValidator:
 
 
 def test_accepts_simple_select(validator: SQLReadOnlyValidator) -> None:
-    result = validator.validate(
-        "SELECT id, email FROM accounts_user WHERE is_active = 1"
-    )
+    result = validator.validate("SELECT id, email FROM accounts_user WHERE is_active = 1")
     assert result.is_valid is True
     assert result.statement_kind == SQLStatementKind.SELECT
     assert result.normalized_sql is not None

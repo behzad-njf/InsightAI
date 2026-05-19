@@ -4,14 +4,18 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
+
 from insightai.domain.exceptions import (
     ChatSessionMessageLimitError,
     ChatSessionNotFoundError,
 )
-from insightai.domain.models.ask import AskResult
 from insightai.domain.models.chat_session import ChatMessage, ChatMessageRole, ChatSession
-from insightai.domain.ports.chat_session_store import IChatSessionStore
 from insightai.infrastructure.config.settings import Settings, get_settings
+
+if TYPE_CHECKING:
+    from insightai.domain.models.ask import AskResult
+    from insightai.domain.ports.chat_session_store import IChatSessionStore
 
 
 class ChatSessionUseCase:
@@ -42,7 +46,9 @@ class ChatSessionUseCase:
         offset: int = 0,
     ) -> list[ChatMessage]:
         await self.require_session(session_id)
-        resolved_limit = limit if limit is not None else self._settings.chat_session_list_default_limit
+        resolved_limit = (
+            limit if limit is not None else self._settings.chat_session_list_default_limit
+        )
         return await self._store.list_messages(
             session_id,
             limit=resolved_limit,

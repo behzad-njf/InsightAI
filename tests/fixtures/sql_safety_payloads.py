@@ -85,10 +85,7 @@ REJECTED_PAYLOADS: tuple[SafetyPayload, ...] = (
         violation_contains=("Into",),
     ),
     SafetyPayload(
-        sql=(
-            "WITH staged AS (INSERT INTO accounts_user (email) VALUES ('x')) "
-            "SELECT 1"
-        ),
+        sql=("WITH staged AS (INSERT INTO accounts_user (email) VALUES ('x')) SELECT 1"),
         kind=DatabaseKind.SQLITE,
         should_accept=False,
         label="write_cte",

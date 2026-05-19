@@ -30,8 +30,7 @@ def test_composite_rejects_evil_payloads(payload: SafetyPayload) -> None:
     if payload.violation_contains:
         joined = " ".join(result.violations).lower()
         assert any(fragment.lower() in joined for fragment in payload.violation_contains), (
-            f"{payload.label}: expected one of {payload.violation_contains} "
-            f"in {result.violations}"
+            f"{payload.label}: expected one of {payload.violation_contains} in {result.violations}"
         )
 
 

@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
-from starlette.requests import Request
+from typing import TYPE_CHECKING
 
 from insightai.domain.models.auth import ApiAuthMode, AuthenticatedPrincipal
-from insightai.infrastructure.config.settings import Settings
+
+if TYPE_CHECKING:
+    from starlette.requests import Request
+
+    from insightai.infrastructure.config.settings import Settings
 
 
 def resolve_rate_limit_key(request: Request, settings: Settings) -> str:

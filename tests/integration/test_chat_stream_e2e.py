@@ -6,16 +6,15 @@ Requires: mocked LLM + SQLite (see ``chat_product_fixtures``).
 
 from __future__ import annotations
 
+import pytest
+
 from insightai.infrastructure.schema.loader import clear_schema_repository_cache
 from tests.fixtures.sql_generation_samples import CLASSROOM_QUESTION
 from tests.integration.chat_product_fixtures import (
     build_product_chat_client,
     dispose_product_client,
-    product_chat_client_auth,
 )
 from tests.integration.sse_helpers import parse_sse
-
-import pytest
 
 pytestmark = [pytest.mark.integration, pytest.mark.streaming]
 
@@ -24,7 +23,12 @@ def _auth_headers(api_key: str) -> dict[str, str]:
     return {"X-API-Key": api_key}
 
 
-def _stream_chat(client, *, headers: dict[str, str] | None = None, **json_body: object) -> list[tuple[str, dict]]:
+def _stream_chat(
+    client,
+    *,
+    headers: dict[str, str] | None = None,
+    **json_body: object,
+) -> list[tuple[str, dict]]:
     with client.stream(
         "POST",
         "/api/v1/chat/stream",

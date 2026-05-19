@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING
 
-from insightai.domain.ports.llm_provider import ILLMProvider
-
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from insightai.domain.models.llm import LLMRequest, LLMResponse, LLMStreamChunk
     from insightai.domain.ports.ai_framework import IAIFramework
+    from insightai.domain.ports.llm_provider import ILLMProvider
 
 
 class LLMCompletionUseCase:

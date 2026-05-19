@@ -135,8 +135,7 @@ class SQLParseValidator(ISQLSafetyValidator):
                     )
             if isinstance(node, exp.Command) and not self._is_explain_command(node):
                 violations.append(
-                    "forbidden_ast:Command: Disallowed SQL command "
-                    f"({node.name or node.this})."
+                    f"forbidden_ast:Command: Disallowed SQL command ({node.name or node.this})."
                 )
         return violations
 

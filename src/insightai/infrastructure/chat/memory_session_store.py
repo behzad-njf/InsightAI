@@ -80,11 +80,7 @@ class MemoryChatSessionStore:
 
     def _purge_expired_locked(self) -> None:
         cutoff = datetime.now(UTC) - self._ttl
-        expired = [
-            sid
-            for sid, session in self._sessions.items()
-            if session.updated_at < cutoff
-        ]
+        expired = [sid for sid, session in self._sessions.items() if session.updated_at < cutoff]
         for sid in expired:
             self._sessions.pop(sid, None)
             self._messages.pop(sid, None)

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from tests.fixtures.sql_generation_samples import CLASSROOM_QUESTION
-from tests.integration.test_ask_api import ask_api_client
 
 
 def test_session_crud_and_chat_history(ask_api_client) -> None:

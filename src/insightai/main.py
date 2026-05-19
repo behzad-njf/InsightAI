@@ -14,13 +14,13 @@ from insightai.api.middleware import RequestIdMiddleware
 from insightai.api.v1.router import api_v1_router
 from insightai.domain.exceptions import ConfigurationError
 from insightai.infrastructure.ai.factory import build_ai_components
-from insightai.infrastructure.config.settings import AppEnvironment, get_settings
 from insightai.infrastructure.chat.bootstrap import build_chat_session_store
-from insightai.infrastructure.ratelimit.bootstrap import build_rate_limiter
+from insightai.infrastructure.config.settings import AppEnvironment, get_settings
 from insightai.infrastructure.database.bootstrap import (
     build_database_components,
 )
 from insightai.infrastructure.logging.setup import configure_logging, get_logger
+from insightai.infrastructure.ratelimit.bootstrap import build_rate_limiter
 
 logger = get_logger(__name__)
 
@@ -46,9 +46,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         logger.warning("database_not_configured", error=exc.message)
         app.state.database = None
 
-    shared_validator = (
-        app.state.database.validator if app.state.database is not None else None
-    )
+    shared_validator = app.state.database.validator if app.state.database is not None else None
     app.state.ai = build_ai_components(settings, sql_validator=shared_validator)
     app.state.chat_sessions = build_chat_session_store(settings)
     logger.info(

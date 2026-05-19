@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
-from sqlalchemy.exc import DBAPIError
+from typing import TYPE_CHECKING
 
 from insightai.domain.exceptions import (
     DatabaseConnectionError,
     DatabaseQueryError,
     DatabaseQueryTimeoutError,
 )
+
+if TYPE_CHECKING:
+    from sqlalchemy.exc import DBAPIError
 
 
 def raise_for_dbapi_error(exc: DBAPIError, *, timeout_seconds: int) -> None:
@@ -62,8 +65,7 @@ def _is_query_timeout_error(exc: DBAPIError) -> bool:
     if "queuepool" in message or "pool timeout" in message:
         return False
     if any(
-        phrase in message
-        for phrase in ("login timeout", "connection timeout", "connect timeout")
+        phrase in message for phrase in ("login timeout", "connection timeout", "connect timeout")
     ):
         return False
     if "hyt00" in message or "query timeout" in message:

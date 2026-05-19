@@ -8,9 +8,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 from insightai.domain.models.llm import LLMProviderKind, LLMResponse, LLMStreamChunk, TokenUsage
-from tests.integration.sse_helpers import parse_sse
 from insightai.infrastructure.ai.factory import AIComponents
 from tests.conftest import make_settings
+from tests.integration.sse_helpers import parse_sse
 
 
 @pytest.fixture
@@ -47,12 +47,16 @@ def ai_client() -> TestClient:
     from insightai.domain.exceptions import ConfigurationError
     from insightai.main import create_app
 
-    with patch("insightai.main.get_settings", return_value=settings), patch(
-        "insightai.main.build_ai_components",
-        return_value=ai,
-    ), patch(
-        "insightai.main.build_database_components",
-        side_effect=ConfigurationError("skip db"),
+    with (
+        patch("insightai.main.get_settings", return_value=settings),
+        patch(
+            "insightai.main.build_ai_components",
+            return_value=ai,
+        ),
+        patch(
+            "insightai.main.build_database_components",
+            side_effect=ConfigurationError("skip db"),
+        ),
     ):
         app = create_app()
         with TestClient(app) as test_client:

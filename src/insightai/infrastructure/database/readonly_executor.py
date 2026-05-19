@@ -11,7 +11,6 @@ from sqlalchemy.exc import DBAPIError, SQLAlchemyError
 
 from insightai.domain.exceptions import (
     DatabaseQueryError,
-    DatabaseQueryTimeoutError,
     ReadOnlySQLViolationError,
 )
 from insightai.domain.models.database import (
@@ -105,14 +104,9 @@ class ReadOnlyQueryExecutor(IReadOnlyQueryExecutor):
         truncated = len(raw_rows) > opts.max_rows
         limited_rows = raw_rows[: opts.max_rows]
 
-        columns = [
-            QueryColumn(name=name, type_name=None) for name in column_names
-        ]
+        columns = [QueryColumn(name=name, type_name=None) for name in column_names]
         rows = [
-            {
-                column_names[i]: serialize_value(row[i])
-                for i in range(len(column_names))
-            }
+            {column_names[i]: serialize_value(row[i]) for i in range(len(column_names))}
             for row in limited_rows
         ]
 

@@ -81,12 +81,8 @@ def test_run_query_rejects_delete_before_executor() -> None:
 def test_run_query_with_shared_bootstrap_validator() -> None:
     engine = create_engine("sqlite:///:memory:")
     with engine.begin() as conn:
-        conn.execute(
-            text("CREATE TABLE accounts_user (id INTEGER PRIMARY KEY, email TEXT)")
-        )
-        conn.execute(
-            text("INSERT INTO accounts_user (id, email) VALUES (1, 'a@test.com')")
-        )
+        conn.execute(text("CREATE TABLE accounts_user (id INTEGER PRIMARY KEY, email TEXT)"))
+        conn.execute(text("INSERT INTO accounts_user (id, email) VALUES (1, 'a@test.com')"))
 
     settings = make_settings(database_kind=DatabaseKind.SQLITE)
     validator = create_sql_safety_validator(kind=DatabaseKind.SQLITE, settings=settings)

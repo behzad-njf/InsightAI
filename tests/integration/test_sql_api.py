@@ -19,14 +19,8 @@ from tests.conftest import make_settings
 def executor() -> ReadOnlyQueryExecutor:
     engine = create_engine("sqlite:///:memory:")
     with engine.begin() as conn:
-        conn.execute(
-            text(
-                "CREATE TABLE accounts_user (id INTEGER PRIMARY KEY, email TEXT)"
-            )
-        )
-        conn.execute(
-            text("INSERT INTO accounts_user (id, email) VALUES (1, 'a@test.com')")
-        )
+        conn.execute(text("CREATE TABLE accounts_user (id INTEGER PRIMARY KEY, email TEXT)"))
+        conn.execute(text("INSERT INTO accounts_user (id, email) VALUES (1, 'a@test.com')"))
     return ReadOnlyQueryExecutor(
         engine,
         create_sql_safety_validator(kind=DatabaseKind.SQLITE),

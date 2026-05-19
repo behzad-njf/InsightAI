@@ -76,7 +76,7 @@ def loads_llm_json_object(json_text: str) -> Any:
             raise json.JSONDecodeError(str(exc), normalized, 0) from exc
         if not isinstance(value, dict):
             msg = "LLM JSON must decode to an object."
-            raise json.JSONDecodeError(msg, normalized, 0)
+            raise json.JSONDecodeError(msg, normalized, 0) from None
         return value
 
 

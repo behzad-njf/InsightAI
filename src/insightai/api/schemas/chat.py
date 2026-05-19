@@ -7,7 +7,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from insightai.domain.models.ask import AskRequest as DomainAskRequest
-from insightai.domain.models.ask import AskResult, AskStreamEvent, AskStreamPhase
+from insightai.domain.models.ask import AskResult, AskStreamEvent
 from insightai.infrastructure.logging.setup import request_id_var
 
 
@@ -131,7 +131,11 @@ class ChatStreamErrorSchema(BaseModel):
     request_id: str
 
 
-def chat_stream_event_to_sse(event: AskStreamEvent, *, request: ChatRequest) -> tuple[str, dict[str, Any]]:
+def chat_stream_event_to_sse(
+    event: AskStreamEvent,
+    *,
+    request: ChatRequest,
+) -> tuple[str, dict[str, Any]]:
     """
     Map a domain stream event to SSE ``(event_name, data_dict)``.
 
@@ -158,8 +162,11 @@ def chat_stream_event_to_sse(event: AskStreamEvent, *, request: ChatRequest) -> 
                 request_id=request_id,
             ).model_dump(),
         )
-    return ("error", ChatStreamErrorSchema(
-        error_message="Invalid stream event",
-        error_code="internal_error",
-        request_id=request_id,
-    ).model_dump())
+    return (
+        "error",
+        ChatStreamErrorSchema(
+            error_message="Invalid stream event",
+            error_code="internal_error",
+            request_id=request_id,
+        ).model_dump(),
+    )

@@ -36,12 +36,16 @@ def client_with_failing_llm() -> TestClient:
     from insightai.domain.exceptions import ConfigurationError
     from insightai.main import create_app
 
-    with patch("insightai.main.get_settings", return_value=settings), patch(
-        "insightai.main.build_ai_components",
-        return_value=ai,
-    ), patch(
-        "insightai.main.build_database_components",
-        side_effect=ConfigurationError("no db"),
+    with (
+        patch("insightai.main.get_settings", return_value=settings),
+        patch(
+            "insightai.main.build_ai_components",
+            return_value=ai,
+        ),
+        patch(
+            "insightai.main.build_database_components",
+            side_effect=ConfigurationError("no db"),
+        ),
     ):
         app = create_app()
         with TestClient(app) as test_client:

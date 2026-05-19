@@ -235,9 +235,7 @@ class SchemaContextBuilder:
                 lines.append("```")
 
         lines.append("")
-        lines.append(
-            "_Use exact table/column names above. Only generate SELECT queries._"
-        )
+        lines.append("_Use exact table/column names above. Only generate SELECT queries._")
         return "\n".join(lines)
 
 
@@ -261,9 +259,7 @@ def _format_table(ctx: SchemaTableContext) -> list[str]:
     if table.foreign_keys:
         fk_preview = table.foreign_keys[:6]
         for fk in fk_preview:
-            lines.append(
-                f"  - FK: `{fk.column}` → `{fk.parent_table}.{fk.parent_column}`"
-            )
+            lines.append(f"  - FK: `{fk.column}` → `{fk.parent_table}.{fk.parent_column}`")
         if len(table.foreign_keys) > len(fk_preview):
             lines.append(f"  - ... (+{len(table.foreign_keys) - len(fk_preview)} more FKs)")
 

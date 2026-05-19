@@ -118,9 +118,7 @@ class LLMStreamChunk(BaseModel):
 
     @property
     def is_terminal(self) -> bool:
-        return self.finish_reason is not None or (
-            self.usage is not None and self.usage.has_usage
-        )
+        return self.finish_reason is not None or (self.usage is not None and self.usage.has_usage)
 
 
 def join_stream_text(chunks: Iterable[LLMStreamChunk]) -> str:

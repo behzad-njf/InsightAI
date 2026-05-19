@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
-from insightai.domain.models.chat_session import ChatMessage, ChatSession
+if TYPE_CHECKING:
+    from insightai.domain.models.chat_session import ChatMessage, ChatSession
 
 
 class IChatSessionStore(Protocol):

@@ -50,12 +50,16 @@ def sql_generate_client() -> Generator[TestClient, None, None]:
 
     from insightai.main import create_app
 
-    with patch("insightai.main.get_settings", return_value=settings), patch(
-        "insightai.main.build_ai_components",
-        return_value=ai,
-    ), patch(
-        "insightai.main.build_database_components",
-        side_effect=ConfigurationError("skip db"),
+    with (
+        patch("insightai.main.get_settings", return_value=settings),
+        patch(
+            "insightai.main.build_ai_components",
+            return_value=ai,
+        ),
+        patch(
+            "insightai.main.build_database_components",
+            side_effect=ConfigurationError("skip db"),
+        ),
     ):
         app = create_app()
         with TestClient(app) as client:

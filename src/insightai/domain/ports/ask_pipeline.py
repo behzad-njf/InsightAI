@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
-from insightai.domain.models.ask import AskRequest, AskResult, AskStreamEvent
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
+    from insightai.domain.models.ask import AskRequest, AskResult, AskStreamEvent
 
 
 class IAskPipeline(Protocol):

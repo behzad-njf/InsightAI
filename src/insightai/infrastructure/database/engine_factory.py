@@ -77,7 +77,5 @@ class DatabaseConnectionFactory(IDatabaseConnectionFactory):
         try:
             import pyodbc  # noqa: F401
         except ImportError as exc:
-            msg = (
-                "MSSQL requires pyodbc. Install with: pip install -e '.[mssql]'"
-            )
+            msg = "MSSQL requires pyodbc. Install with: pip install -e '.[mssql]'"
             raise ConfigurationError(msg) from exc

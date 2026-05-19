@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from tests.integration.test_ask_api import ask_api_client, ask_api_client_no_db
 from tests.fixtures.sql_generation_samples import CLASSROOM_QUESTION
 
 

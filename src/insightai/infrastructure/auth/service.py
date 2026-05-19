@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import hmac
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from insightai.domain.exceptions import ConfigurationError, InvalidCredentialsError
 from insightai.domain.models.auth import ApiAuthMode, AuthenticatedPrincipal
-from insightai.infrastructure.config.settings import Settings
+
+if TYPE_CHECKING:
+    from insightai.infrastructure.config.settings import Settings
 
 
 def authenticate_request(
@@ -31,7 +33,10 @@ def authenticate_request(
             raise InvalidCredentialsError("API key required (X-API-Key or Bearer token).")
         if not _is_valid_api_key(settings, candidate):
             raise InvalidCredentialsError("Invalid API key.")
-        return AuthenticatedPrincipal(subject=_api_key_subject(settings, candidate), auth_method=ApiAuthMode.API_KEY)
+        return AuthenticatedPrincipal(
+            subject=_api_key_subject(settings, candidate),
+            auth_method=ApiAuthMode.API_KEY,
+        )
 
     if settings.api_auth_mode == ApiAuthMode.JWT:
         if not token:

@@ -45,8 +45,6 @@ def readiness(
         database=db_response,
     )
     status_code = (
-        status.HTTP_200_OK
-        if result.status == "ready"
-        else status.HTTP_503_SERVICE_UNAVAILABLE
+        status.HTTP_200_OK if result.status == "ready" else status.HTTP_503_SERVICE_UNAVAILABLE
     )
     return JSONResponse(status_code=status_code, content=body.model_dump())

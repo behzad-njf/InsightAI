@@ -43,9 +43,7 @@ def test_bootstrap_execution_options_from_settings() -> None:
 def test_executor_applies_settings_max_rows_without_explicit_options() -> None:
     engine = create_engine("sqlite:///:memory:")
     with engine.begin() as conn:
-        conn.execute(
-            text("CREATE TABLE accounts_user (id INTEGER PRIMARY KEY, email TEXT)")
-        )
+        conn.execute(text("CREATE TABLE accounts_user (id INTEGER PRIMARY KEY, email TEXT)"))
         for i in range(1, 6):
             conn.execute(
                 text("INSERT INTO accounts_user (id, email) VALUES (:id, :email)"),
@@ -67,9 +65,7 @@ def test_executor_applies_settings_max_rows_without_explicit_options() -> None:
 def test_run_query_use_case_applies_settings_defaults() -> None:
     engine = create_engine("sqlite:///:memory:")
     with engine.begin() as conn:
-        conn.execute(
-            text("CREATE TABLE accounts_user (id INTEGER PRIMARY KEY, email TEXT)")
-        )
+        conn.execute(text("CREATE TABLE accounts_user (id INTEGER PRIMARY KEY, email TEXT)"))
         for i in range(1, 4):
             conn.execute(
                 text("INSERT INTO accounts_user (id, email) VALUES (:id, :email)"),

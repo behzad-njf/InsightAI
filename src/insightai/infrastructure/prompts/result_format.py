@@ -38,9 +38,7 @@ def format_query_result_for_prompt(
     ]
     for row in sample.rows:
         lines.append(
-            "| "
-            + " | ".join(_escape_cell(_cell_value(row, name)) for name in columns)
-            + " |",
+            "| " + " | ".join(_escape_cell(_cell_value(row, name)) for name in columns) + " |",
         )
 
     footnote = sampling_footnote(sample, total_row_count=result.row_count)

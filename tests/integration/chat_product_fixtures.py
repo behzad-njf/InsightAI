@@ -21,7 +21,10 @@ from insightai.domain.models.llm import (
 from insightai.infrastructure.ai.answer_generator import LLMAnswerGenerator
 from insightai.infrastructure.ai.factory import AIComponents
 from insightai.infrastructure.ai.sql_generator import LLMSQLGenerator
-from insightai.infrastructure.database.bootstrap import DatabaseComponents, build_database_components
+from insightai.infrastructure.database.bootstrap import (
+    DatabaseComponents,
+    build_database_components,
+)
 from insightai.infrastructure.prompts.loader import (
     load_answer_generation_prompts,
     load_answer_generation_stream_prompts,
@@ -49,6 +52,7 @@ def _mock_llm_framework() -> MagicMock:
         usage=TokenUsage(prompt_tokens=15, completion_tokens=25, total_tokens=40),
         finish_reason="stop",
     )
+
     async def _complete(request: LLMRequest, **_kwargs: object) -> LLMResponse:
         task = (request.metadata or {}).get("task", "")
         if task.startswith("answer_generation"):

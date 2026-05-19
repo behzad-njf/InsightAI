@@ -59,11 +59,11 @@ class RedisChatSessionStore:
         return ChatSession.model_validate(data)
 
     async def delete_session(self, session_id: str) -> bool:
-        deleted = await self._client.delete(
+        deleted_count = await self._client.delete(
             _session_key(session_id),
             _messages_key(session_id),
         )
-        return deleted > 0
+        return int(deleted_count) > 0
 
     async def append_message(self, message: ChatMessage) -> ChatMessage:
         session_key = _session_key(message.session_id)

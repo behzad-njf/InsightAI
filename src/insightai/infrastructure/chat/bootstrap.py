@@ -4,11 +4,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import TYPE_CHECKING
 
-from insightai.domain.ports.chat_session_store import IChatSessionStore
 from insightai.infrastructure.chat.memory_session_store import MemoryChatSessionStore
-from insightai.infrastructure.config.settings import Settings
 from insightai.infrastructure.logging.setup import get_logger
+
+if TYPE_CHECKING:
+    from insightai.domain.ports.chat_session_store import IChatSessionStore
+    from insightai.infrastructure.config.settings import Settings
 
 logger = get_logger(__name__)
 

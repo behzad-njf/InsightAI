@@ -118,9 +118,9 @@ def test_prompts_loaded_from_files_not_hardcoded(prompt_bundle, settings) -> Non
     """Acceptance: prompts come from ``prompts/sql_generation/*.md``."""
     from insightai.infrastructure.prompts.loader import render_sql_generation_messages
 
-    system_file = (
-        settings.project_root / "prompts" / "sql_generation" / "system.md"
-    ).read_text(encoding="utf-8")
+    system_file = (settings.project_root / "prompts" / "sql_generation" / "system.md").read_text(
+        encoding="utf-8"
+    )
     messages = render_sql_generation_messages(
         question="test",
         schema_context="### accounts_user",
