@@ -1,0 +1,72 @@
+# InsightAI — local development stack
+# Production CampusMetrics: point API at external MSSQL via .env (see docker/README.md)
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: insightai-api
+    ports:
+      - "${INSIGHTAI_API_PORT:-8000}:8000"
+    env_file:
+      - .env
+    environment:
+      INSIGHTAI_ENV: ${INSIGHTAI_ENV:-development}
+      INSIGHTAI_DEBUG: ${INSIGHTAI_DEBUG:-false}
+      INSIGHTAI_LOG_FORMAT: ${INSIGHTAI_LOG_FORMAT:-json}
+      INSIGHTAI_API_RELOAD: "false"
+      INSIGHTAI_DATABASE_KIND: postgresql
+      INSIGHTAI_DATABASE_READONLY_URL: postgresql+psycopg2://insightai_readonly:insightai_readonly@postgres:5432/insightai
+      INSIGHTAI_REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/api/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: insightai-postgres
+    environment:
+      POSTGRES_DB: insightai
+      POSTGRES_USER: insightai
+      POSTGRES_PASSWORD: insightai
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U insightai -d insightai"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: insightai-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:

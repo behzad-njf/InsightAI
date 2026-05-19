@@ -1,0 +1,32 @@
+InsightAI — Attribution Notice
+==============================
+
+In addition to the MIT License (see LICENSE), anyone who uses, modifies, or
+redistributes this software agrees to the following attribution requirements:
+
+1. **Credit the author** — Clearly state that the software is based on
+   **InsightAI** by **MrHiB** (or derived from it).
+
+2. **Link to the project** — Include a prominent link to the canonical
+   repository in documentation, README, “About”, or equivalent user-facing
+   materials:
+
+   https://github.com/behzad-njf/InsightAI
+
+   If you relocate the project, you must still link to the original repository
+   above (not only your fork), unless mrhib has designated a new canonical URL
+   in the upstream README.
+
+3. **Preserve notices** — Do not remove or obscure this NOTICE file, the
+   LICENSE file, or copyright headers when distributing source or substantial
+   portions of the code.
+
+4. **No false endorsement** — You may not imply that mrhib endorses your
+   product or service without prior written permission.
+
+These terms apply to binary distributions, hosted services, and internal use
+that exposes the software to end users (for example, a chat UI powered by this
+codebase).
+
+For questions about licensing or commercial use without attribution, contact
+the repository owner via GitHub Issues on the canonical repository.

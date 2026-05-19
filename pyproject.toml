@@ -1,0 +1,141 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "insightai"
+version = "0.1.0"
+description = "Production-grade natural language to SQL agent platform"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT", file = "LICENSE" }
+authors = [{ name = "Behzad Najafzadeh" }]
+keywords = ["fastapi", "sql", "llm", "llamaindex", "analytics"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: FastAPI",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Typing :: Typed",
+]
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "pydantic>=2.9.0",
+    "pydantic-settings>=2.6.0",
+    "sqlalchemy>=2.0.36",
+    "psycopg2-binary>=2.9.10",
+    "groq>=0.13.0",
+    "openai>=1.55.0",
+    "httpx>=0.28.0",
+    "llama-index-core>=0.12.0",
+    "llama-index-llms-openai>=0.3.0",
+    "structlog>=24.4.0",
+    "python-dotenv>=1.0.1",
+    "tenacity>=9.0.0",
+    "sqlglot>=26.0.0",
+    "PyJWT>=2.8.0",
+]
+
+[project.optional-dependencies]
+mssql = ["pyodbc>=5.2.0"]
+redis = ["redis>=5.0.0"]
+dev = [
+    "pyodbc>=5.2.0",
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+    "httpx>=0.28.0",
+    "ruff>=0.8.0",
+    "mypy>=1.13.0",
+    "types-requests>=2.32.0",
+]
+
+[project.scripts]
+insightai = "insightai.main:run"
+
+[project.urls]
+Documentation = "https://github.com/mrhib/InsightAI#readme"
+Repository = "https://github.com/mrhib/InsightAI"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/insightai"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # comprehensions
+    "UP",  # pyupgrade
+    "SIM", # simplify
+    "TCH", # type-checking imports
+]
+ignore = ["B008"]  # Depends() in FastAPI defaults is intentional
+
+[tool.ruff.lint.isort]
+known-first-party = ["insightai"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/insightai/infrastructure/logging/setup.py" = ["TC002"]
+"src/insightai/infrastructure/ai/**/*.py" = ["TC001", "TC003"]
+"src/insightai/infrastructure/schema/**/*.py" = ["TC001", "TC003"]
+"src/insightai/infrastructure/prompts/**/*.py" = ["TC001", "TC003"]
+"src/insightai/application/use_cases/build_schema_context.py" = ["TC001"]
+"src/insightai/domain/models/sql_generation.py" = ["TC001"]
+"src/insightai/api/**/*.py" = ["TC001", "TC002", "TC003"]
+"src/insightai/main.py" = ["TC003"]
+"tests/**/*.py" = ["TC002", "TC003"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_ignores = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+no_implicit_optional = true
+plugins = ["pydantic.mypy"]
+mypy_path = "src"
+packages = ["insightai"]
+exclude = ["tests/"]
+
+[[tool.mypy.overrides]]
+module = [
+    "groq.*",
+    "llama_index.*",
+    "llama_index_core.*",
+    "pyodbc.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+addopts = "-ra -q --strict-markers"
+markers = [
+    "integration: integration tests (may need DB or network)",
+    "streaming: chat SSE streaming tests (mocked LLM + SQLite)",
+    "mssql: optional MSSQL integration (INSIGHTAI_MSSQL_INTEGRATION_URL)",
+    "slow: slow tests",
+]
+
+[tool.coverage.run]
+source = ["insightai"]
+branch = true
+omit = ["*/tests/*", "*/__init__.py"]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true

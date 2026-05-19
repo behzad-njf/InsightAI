@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>InsightAI Demo</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #0f1419;
+      --panel: #1a2332;
+      --text: #e7ecf3;
+      --muted: #8b9cb3;
+      --accent: #3d8bfd;
+      --border: #2a3648;
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #f4f6fa;
+        --panel: #fff;
+        --text: #1a2332;
+        --muted: #5c6b80;
+        --accent: #1a6ef5;
+        --border: #d8dee8;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+    main {
+      width: min(720px, 100%);
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+    }
+    h1 { margin: 0 0 0.25rem; font-size: 1.35rem; }
+    .sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.25rem; }
+    label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 0.35rem; }
+    textarea {
+      width: 100%;
+      min-height: 88px;
+      padding: 0.75rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text);
+      font: inherit;
+      resize: vertical;
+    }
+    .row { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; margin: 1rem 0; }
+    .row label.inline { display: inline-flex; align-items: center; gap: 0.4rem; margin: 0; color: var(--text); }
+    input[type="text"] {
+      flex: 1;
+      min-width: 200px;
+      padding: 0.5rem 0.65rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text);
+      font: inherit;
+    }
+    button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 0.6rem 1.2rem;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    #status { color: var(--muted); font-size: 0.9rem; min-height: 1.25rem; margin-bottom: 0.75rem; }
+    #answer {
+      white-space: pre-wrap;
+      line-height: 1.5;
+      padding: 1rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      min-height: 4rem;
+      background: rgba(127, 127, 127, 0.06);
+    }
+    #meta { margin-top: 0.75rem; font-size: 0.85rem; color: var(--muted); }
+    .error { color: #e55353; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>InsightAI Demo</h1>
+    <p class="sub">Ask a question about your database. Requires the API on port 8000.</p>
+
+    <label for="apiUrl">API URL</label>
+    <input type="text" id="apiUrl" value="http://localhost:8000" />
+
+    <label for="apiKey" style="margin-top: 0.75rem">API key (optional)</label>
+    <input type="text" id="apiKey" placeholder="Only if INSIGHTAI_API_AUTH_MODE=api_key" />
+
+    <label for="question" style="margin-top: 0.75rem">Question</label>
+    <textarea id="question" placeholder="e.g. How many active classrooms are there?"></textarea>
+
+    <div class="row">
+      <label class="inline"><input type="checkbox" id="stream" checked /> Stream answer</label>
+      <label class="inline"><input type="checkbox" id="includeSql" /> Show SQL</label>
+      <button type="button" id="askBtn">Ask</button>
+    </div>
+
+    <div id="status"></div>
+    <div id="answer"></div>
+    <div id="meta"></div>
+  </main>
+
+  <script>
+    const apiUrlInput = document.getElementById("apiUrl");
+    const apiKeyInput = document.getElementById("apiKey");
+    const questionInput = document.getElementById("question");
+    const streamCheck = document.getElementById("stream");
+    const includeSqlCheck = document.getElementById("includeSql");
+    const askBtn = document.getElementById("askBtn");
+    const statusEl = document.getElementById("status");
+    const answerEl = document.getElementById("answer");
+    const metaEl = document.getElementById("meta");
+
+    const phaseLabels = {
+      generating_sql: "Generating SQL…",
+      executing_query: "Running query…",
+      generating_answer: "Writing answer…",
+    };
+
+    function headers() {
+      const h = { "Content-Type": "application/json" };
+      const key = apiKeyInput.value.trim();
+      if (key) h["X-API-Key"] = key;
+      return h;
+    }
+
+    function base() {
+      return apiUrlInput.value.replace(/\/$/, "");
+    }
+
+    function setBusy(busy) {
+      askBtn.disabled = busy;
+    }
+
+    async function askSync() {
+      const body = {
+        question: questionInput.value.trim(),
+        include_sql: includeSqlCheck.checked,
+      };
+      statusEl.textContent = "Thinking…";
+      answerEl.textContent = "";
+      metaEl.textContent = "";
+
+      const res = await fetch(`${base()}/api/v1/chat`, {
+        method: "POST",
+        headers: headers(),
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.detail?.message || data.detail || res.statusText);
+      }
+      statusEl.textContent = "Done.";
+      answerEl.textContent = data.answer || "";
+      metaEl.textContent = formatMeta(data);
+    }
+
+    async function askStream() {
+      const body = {
+        question: questionInput.value.trim(),
+        include_sql: includeSqlCheck.checked,
+      };
+      statusEl.textContent = "";
+      answerEl.textContent = "";
+      metaEl.textContent = "";
+
+      const res = await fetch(`${base()}/api/v1/chat/stream`, {
+        method: "POST",
+        headers: headers(),
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.detail?.message || data.detail || res.statusText);
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let donePayload = null;
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split("\n\n");
+        buffer = parts.pop() || "";
+        for (const block of parts) {
+          const event = parseSseBlock(block);
+          if (!event) continue;
+          if (event.name === "status") {
+            statusEl.textContent = phaseLabels[event.data.phase] || event.data.phase;
+          } else if (event.name === "token") {
+            answerEl.textContent += event.data.text || "";
+          } else if (event.name === "done") {
+            donePayload = event.data;
+          } else if (event.name === "error") {
+            throw new Error(event.data.error_message || "Stream error");
+          }
+        }
+      }
+
+      statusEl.textContent = "Done.";
+      if (donePayload && !answerEl.textContent) {
+        answerEl.textContent = donePayload.answer || "";
+      }
+      if (donePayload) metaEl.textContent = formatMeta(donePayload);
+    }
+
+    function parseSseBlock(block) {
+      let name = null;
+      let dataLine = null;
+      for (const line of block.split("\n")) {
+        if (line.startsWith("event: ")) name = line.slice(7).trim();
+        if (line.startsWith("data: ")) dataLine = line.slice(6);
+      }
+      if (!name || !dataLine) return null;
+      return { name, data: JSON.parse(dataLine) };
+    }
+
+    function formatMeta(data) {
+      const t = data.timings || {};
+      const parts = [
+        `Rows: ${data.row_count ?? "?"}`,
+        data.truncation_noted ? "(truncated)" : "",
+        t.total_ms != null ? `· ${t.total_ms} ms total` : "",
+      ];
+      if (data.sql) parts.push("\n\nSQL:\n" + data.sql);
+      return parts.filter(Boolean).join(" ");
+    }
+
+    askBtn.addEventListener("click", async () => {
+      const q = questionInput.value.trim();
+      if (!q) {
+        statusEl.innerHTML = '<span class="error">Enter a question.</span>';
+        return;
+      }
+      setBusy(true);
+      try {
+        if (streamCheck.checked) await askStream();
+        else await askSync();
+      } catch (err) {
+        statusEl.innerHTML = `<span class="error">${err.message}</span>`;
+        answerEl.textContent = "";
+        metaEl.textContent = "";
+      } finally {
+        setBusy(false);
+      }
+    });
+
+    questionInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        askBtn.click();
+      }
+    });
+  </script>
+</body>
+</html>

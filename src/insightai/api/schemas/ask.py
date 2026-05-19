@@ -1,0 +1,131 @@
+"""API schemas for the ask endpoint (Phase 6.5)."""
+
+from __future__ import annotations
+
+from typing import Any
+
+from pydantic import BaseModel, Field
+
+from insightai.api.schemas.llm import TokenUsageSchema
+from insightai.domain.models.ask import AskRequest as DomainAskRequest
+from insightai.domain.models.ask import AskResult
+from insightai.domain.models.database import DatabaseKind
+
+
+class AskRequest(BaseModel):
+    """Natural language question → SQL → execute → grounded answer."""
+
+    question: str = Field(min_length=1)
+    max_context_tables: int = Field(default=12, ge=1, le=50)
+    max_rows: int | None = Field(default=None, ge=1, le=100_000)
+    database_kind: DatabaseKind | None = None
+    sql_model: str | None = None
+    sql_temperature: float = Field(default=0.1, ge=0.0, le=2.0)
+    answer_model: str | None = None
+    answer_temperature: float = Field(default=0.2, ge=0.0, le=2.0)
+    max_display_rows: int | None = Field(default=None, ge=1, le=500)
+    timeout_seconds: int | None = Field(default=None, ge=1, le=600)
+    enforce_readonly: bool | None = None
+
+    def to_domain(self) -> DomainAskRequest:
+        return DomainAskRequest(
+            question=self.question,
+            max_context_tables=self.max_context_tables,
+            max_rows=self.max_rows,
+            database_kind=self.database_kind,
+            sql_model=self.sql_model,
+            sql_temperature=self.sql_temperature,
+            answer_model=self.answer_model,
+            answer_temperature=self.answer_temperature,
+            max_display_rows=self.max_display_rows,
+            timeout_seconds=self.timeout_seconds,
+            enforce_readonly=self.enforce_readonly,
+        )
+
+
+class AskTimingsSchema(BaseModel):
+    sql_generation_ms: float
+    query_execution_ms: float
+    answer_generation_ms: float
+    total_ms: float
+
+
+class AskQueryResultSchema(BaseModel):
+    columns: list[str]
+    rows: list[dict[str, Any]]
+    row_count: int
+    truncated: bool
+    execution_time_ms: float | None = None
+
+
+class AskResponse(BaseModel):
+    """Full pipeline result for debug / internal clients."""
+
+    question: str
+    answer: str
+    summary_bullets: list[str] = Field(default_factory=list)
+    caveats: str | None = None
+    row_count: int
+    truncation_noted: bool
+    sql: str
+    sql_explanation: str
+    confidence: str
+    uncertainty_notes: str | None = None
+    tables_used: list[str] = Field(default_factory=list)
+    schema_table_names: list[str] = Field(default_factory=list)
+    query_result: AskQueryResultSchema
+    timings: AskTimingsSchema
+    timeout_seconds: int = Field(
+        description="Statement timeout applied to query execution.",
+    )
+    sql_usage: TokenUsageSchema
+    answer_usage: TokenUsageSchema
+    sql_model: str | None = None
+    answer_model: str | None = None
+    provider: str | None = None
+
+    @classmethod
+    def from_domain(cls, result: AskResult) -> AskResponse:
+        columns = [col.name for col in result.execution.query_result.columns]
+        provider = result.answer.answer.provider or result.sql.sql.provider
+        return cls(
+            question=result.question,
+            answer=result.answer.answer.answer,
+            summary_bullets=result.answer.answer.summary_bullets,
+            caveats=result.answer.answer.caveats,
+            row_count=result.execution.query_result.row_count,
+            truncation_noted=result.answer.answer.truncation_noted,
+            sql=result.execution.sql,
+            sql_explanation=result.sql.sql.explanation,
+            confidence=result.sql.sql.confidence.value,
+            uncertainty_notes=result.sql.sql.uncertainty_notes,
+            tables_used=result.sql.sql.tables_used,
+            schema_table_names=result.sql.schema_context.table_names,
+            query_result=AskQueryResultSchema(
+                columns=columns,
+                rows=result.execution.query_result.rows,
+                row_count=result.execution.query_result.row_count,
+                truncated=result.execution.query_result.truncated,
+                execution_time_ms=result.execution.query_result.execution_time_ms,
+            ),
+            timings=AskTimingsSchema(
+                sql_generation_ms=result.timings.sql_generation_ms,
+                query_execution_ms=result.timings.query_execution_ms,
+                answer_generation_ms=result.timings.answer_generation_ms,
+                total_ms=result.timings.total_ms,
+            ),
+            timeout_seconds=result.execution.execution_options.timeout_seconds,
+            sql_usage=TokenUsageSchema(
+                prompt_tokens=result.sql.sql.usage.prompt_tokens,
+                completion_tokens=result.sql.sql.usage.completion_tokens,
+                total_tokens=result.sql.sql.usage.total_tokens,
+            ),
+            answer_usage=TokenUsageSchema(
+                prompt_tokens=result.answer.answer.usage.prompt_tokens,
+                completion_tokens=result.answer.answer.usage.completion_tokens,
+                total_tokens=result.answer.answer.usage.total_tokens,
+            ),
+            sql_model=result.sql.sql.model,
+            answer_model=result.answer.answer.model,
+            provider=provider.value if provider else None,
+        )
