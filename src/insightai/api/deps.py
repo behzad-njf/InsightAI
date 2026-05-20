@@ -22,8 +22,10 @@ from insightai.infrastructure.database.bootstrap import DatabaseComponents
 from insightai.infrastructure.schema.loader import get_schema_repository
 
 if TYPE_CHECKING:
+    from insightai.domain.ports.cache import ICache
     from insightai.domain.ports.chat_session_store import IChatSessionStore
     from insightai.domain.ports.database import IDatabaseHealthCheck
+    from insightai.domain.ports.schema_repository import ISchemaRepository
 
 
 def get_settings(request: Request) -> Settings:
@@ -53,18 +55,27 @@ def get_llm_completion_use_case(request: Request) -> LLMCompletionUseCase:
     return LLMCompletionUseCase(ai.framework)
 
 
-def get_schema_repository_dep() -> ISchemaRepository:
+def get_schema_repository_dep(request: Request) -> ISchemaRepository:
+    schema = getattr(request.app.state, "schema", None)
+    if schema is not None:
+        return cast("ISchemaRepository", schema.repository)
     return get_schema_repository()
 
 
-def get_schema_context_use_case() -> BuildSchemaContextUseCase:
-    return BuildSchemaContextUseCase(get_schema_repository())
+def get_schema_context_use_case(request: Request) -> BuildSchemaContextUseCase:
+    schema = getattr(request.app.state, "schema", None)
+    return BuildSchemaContextUseCase(
+        get_schema_repository_dep(request),
+        cache=get_cache(request),
+        settings=get_settings(request),
+        schema_path=schema.schema_path if schema is not None else None,
+    )
 
 
 def get_generate_sql_use_case(request: Request) -> GenerateSQLUseCase:
     ai: AIComponents = request.app.state.ai
     return GenerateSQLUseCase(
-        BuildSchemaContextUseCase(get_schema_repository()),
+        get_schema_context_use_case(request),
         ai.sql_generator,
         ai.settings,
     )
@@ -84,6 +95,11 @@ def get_ask_use_case(request: Request) -> AskUseCase:
 def get_generate_answer_use_case(request: Request) -> GenerateAnswerUseCase:
     ai: AIComponents = request.app.state.ai
     return GenerateAnswerUseCase(ai.answer_generator, ai.settings)
+
+
+def get_cache(request: Request) -> ICache:
+    """Application cache (no-op when ``INSIGHTAI_CACHE_ENABLED=false``)."""
+    return cast("ICache", request.app.state.cache.cache)
 
 
 def get_chat_session_store(request: Request) -> IChatSessionStore:
@@ -111,4 +127,5 @@ def get_run_query_use_case(request: Request) -> RunQueryUseCase:
         settings,
         sql_validator=db.validator,
         execution_defaults=db.execution_options,
+        cache=get_cache(request),
     )

@@ -46,6 +46,10 @@ class RunQueryRequest(BaseModel):
         default=None,
         description="When None, uses settings.sql_enforce_readonly.",
     )
+    cache_scope: str | None = Field(
+        default=None,
+        description="Optional cache namespace (e.g. auth subject) for user-scoped query caching.",
+    )
 
     model_config = {"frozen": True}
 
@@ -105,12 +109,14 @@ class RunQueryRequest(BaseModel):
         max_rows: int | None = None,
         timeout_seconds: int | None = None,
         enforce_readonly: bool | None = None,
+        cache_scope: str | None = None,
     ) -> Self:
         return cls(
             sql=sql,
             max_rows=max_rows,
             timeout_seconds=timeout_seconds,
             enforce_readonly=enforce_readonly,
+            cache_scope=cache_scope,
         )
 
     @classmethod
@@ -121,12 +127,14 @@ class RunQueryRequest(BaseModel):
         max_rows: int | None = None,
         timeout_seconds: int | None = None,
         enforce_readonly: bool | None = None,
+        cache_scope: str | None = None,
     ) -> Self:
         return cls(
             generated_sql=generated,
             max_rows=max_rows,
             timeout_seconds=timeout_seconds,
             enforce_readonly=enforce_readonly,
+            cache_scope=cache_scope,
         )
 
     @classmethod
@@ -137,12 +145,14 @@ class RunQueryRequest(BaseModel):
         max_rows: int | None = None,
         timeout_seconds: int | None = None,
         enforce_readonly: bool | None = None,
+        cache_scope: str | None = None,
     ) -> Self:
         return cls(
             generate_result=result,
             max_rows=max_rows,
             timeout_seconds=timeout_seconds,
             enforce_readonly=enforce_readonly,
+            cache_scope=cache_scope,
         )
 
     def to_execution_options(

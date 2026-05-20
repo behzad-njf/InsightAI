@@ -13,7 +13,7 @@ router = APIRouter(prefix="/schema", tags=["schema"])
 
 
 @router.get("/context", response_model=SchemaContextResponse)
-def get_schema_context(
+async def get_schema_context(
     question: str = Query(..., min_length=1, description="Natural language question"),
     max_tables: int = Query(12, ge=1, le=50),
     use_case: BuildSchemaContextUseCase = Depends(get_schema_context_use_case),
@@ -21,9 +21,9 @@ def get_schema_context(
     """
     Return relevant schema context for a question (debug / Phase 3 input).
 
-    Parses `schema/database_schema.md` on first request (cached).
+    Schema markdown is parsed at application startup; context results may be cached (Phase 9.2).
     """
-    result = use_case.execute(
+    result = await use_case.execute(
         SchemaContextRequest(question=question, max_tables=max_tables),
     )
     return SchemaContextResponse.from_result(result)

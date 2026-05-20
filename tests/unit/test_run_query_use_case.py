@@ -44,8 +44,9 @@ def run_query() -> RunQueryUseCase:
     )
 
 
-def test_execute_raw_sql(run_query: RunQueryUseCase) -> None:
-    result = run_query.execute(
+@pytest.mark.asyncio
+async def test_execute_raw_sql(run_query: RunQueryUseCase) -> None:
+    result = await run_query.execute(
         RunQueryRequest.from_sql(
             "SELECT id, email FROM accounts_user ORDER BY id",
         ),
@@ -57,20 +58,22 @@ def test_execute_raw_sql(run_query: RunQueryUseCase) -> None:
     assert result.sql.upper().startswith("SELECT")
 
 
-def test_execute_from_sql_generation_result(run_query: RunQueryUseCase) -> None:
+@pytest.mark.asyncio
+async def test_execute_from_sql_generation_result(run_query: RunQueryUseCase) -> None:
     generated = SQLGenerationResult(
         sql="SELECT email FROM accounts_user WHERE id = 1",
         explanation="One user email.",
         confidence=SQLGenerationConfidence.HIGH,
     )
-    result = run_query.execute(RunQueryRequest.from_generation(generated))
+    result = await run_query.execute(RunQueryRequest.from_generation(generated))
     assert result.source == RunQuerySQLSource.GENERATED
     assert result.generation is generated
     assert result.query_result.row_count == 1
     assert result.query_result.rows[0]["email"] == "a@test.com"
 
 
-def test_execute_from_generate_sql_result(run_query: RunQueryUseCase) -> None:
+@pytest.mark.asyncio
+async def test_execute_from_generate_sql_result(run_query: RunQueryUseCase) -> None:
     generated = SQLGenerationResult(
         sql="SELECT COUNT(*) AS n FROM accounts_user",
         explanation="Count users.",
@@ -87,15 +90,16 @@ def test_execute_from_generate_sql_result(run_query: RunQueryUseCase) -> None:
         ),
         sql=generated,
     )
-    result = run_query.execute(RunQueryRequest.from_generate_sql(gen_result))
+    result = await run_query.execute(RunQueryRequest.from_generate_sql(gen_result))
     assert result.source == RunQuerySQLSource.GENERATED
     assert result.question == "How many users?"
     assert result.query_result.rows[0]["n"] == 2
 
 
-def test_rejects_delete_before_db(run_query: RunQueryUseCase) -> None:
+@pytest.mark.asyncio
+async def test_rejects_delete_before_db(run_query: RunQueryUseCase) -> None:
     with pytest.raises(ReadOnlySQLViolationError):
-        run_query.execute(RunQueryRequest.from_sql("DELETE FROM accounts_user"))
+        await run_query.execute(RunQueryRequest.from_sql("DELETE FROM accounts_user"))
 
 
 def test_rejects_empty_raw_sql() -> None:
@@ -125,8 +129,9 @@ def test_rejects_multiple_sql_sources() -> None:
         )
 
 
-def test_respects_max_rows_override(run_query: RunQueryUseCase) -> None:
-    result = run_query.execute(
+@pytest.mark.asyncio
+async def test_respects_max_rows_override(run_query: RunQueryUseCase) -> None:
+    result = await run_query.execute(
         RunQueryRequest.from_sql(
             "SELECT id FROM accounts_user ORDER BY id",
             max_rows=1,

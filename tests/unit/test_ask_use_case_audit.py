@@ -42,7 +42,7 @@ def audited_ask_use_case() -> tuple[AskUseCase, RecordingAuditLogger]:
     generate_sql = MagicMock()
     generate_sql.execute = AsyncMock(return_value=_sql_result())
     run_query = MagicMock()
-    run_query.execute = MagicMock(return_value=_run_result())
+    run_query.execute = AsyncMock(return_value=_run_result())
     generate_answer = MagicMock()
     generate_answer.execute = AsyncMock(return_value=_answer_result())
     audit = RecordingAuditLogger()

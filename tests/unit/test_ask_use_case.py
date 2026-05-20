@@ -80,7 +80,7 @@ def ask_use_case() -> AskUseCase:
     generate_sql = MagicMock()
     generate_sql.execute = AsyncMock(return_value=_sql_result())
     run_query = MagicMock()
-    run_query.execute = MagicMock(return_value=_run_result())
+    run_query.execute = AsyncMock(return_value=_run_result())
     generate_answer = MagicMock()
     generate_answer.execute = AsyncMock(return_value=_answer_result())
     return AskUseCase(generate_sql, run_query, generate_answer)
@@ -102,7 +102,7 @@ async def test_ask_runs_sql_execute_answer_in_order(ask_use_case: AskUseCase) ->
     assert result.timings.answer_generation_ms >= 0
 
     ask_use_case._generate_sql.execute.assert_awaited_once()  # type: ignore[attr-defined]
-    ask_use_case._run_query.execute.assert_called_once()  # type: ignore[attr-defined]
+    ask_use_case._run_query.execute.assert_awaited_once()  # type: ignore[attr-defined]
     ask_use_case._generate_answer.execute.assert_awaited_once()  # type: ignore[attr-defined]
 
 

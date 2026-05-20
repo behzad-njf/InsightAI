@@ -75,15 +75,17 @@ def test_mssql_health_check(mssql_stack) -> None:
     assert status.kind == DatabaseKind.MSSQL
 
 
-def test_mssql_run_query_select_one(mssql_stack) -> None:
+@pytest.mark.asyncio
+async def test_mssql_run_query_select_one(mssql_stack) -> None:
     _settings, _components, run_query = mssql_stack
-    result = run_query.execute(RunQueryRequest.from_sql("SELECT 1 AS n"))
+    result = await run_query.execute(RunQueryRequest.from_sql("SELECT 1 AS n"))
     assert result.query_result.row_count == 1
     assert result.query_result.rows[0]["n"] == 1
     assert result.execution_options.max_rows == 100
 
 
-def test_mssql_invalid_sql_never_executes(mssql_stack) -> None:
+@pytest.mark.asyncio
+async def test_mssql_invalid_sql_never_executes(mssql_stack) -> None:
     _settings, components, run_query = mssql_stack
     execute_called = False
     real_execute = components.executor.execute
@@ -95,7 +97,7 @@ def test_mssql_invalid_sql_never_executes(mssql_stack) -> None:
 
     components.executor.execute = tracking_execute  # type: ignore[method-assign]
     with pytest.raises(ReadOnlySQLViolationError):
-        run_query.execute(RunQueryRequest.from_sql("DELETE FROM accounts_user"))
+        await run_query.execute(RunQueryRequest.from_sql("DELETE FROM accounts_user"))
     assert execute_called is False
 
 

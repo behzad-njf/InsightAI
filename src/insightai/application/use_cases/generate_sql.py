@@ -39,11 +39,12 @@ class GenerateSQLUseCase:
     async def execute(self, request: GenerateSQLRequest) -> GenerateSQLResult:
         database_kind = request.database_kind or self._settings.database_kind
 
-        context = self._schema_context.execute(
+        context = await self._schema_context.execute(
             SchemaContextRequest(
                 question=request.question,
                 max_tables=request.max_context_tables,
             ),
+            cache_scope=request.cache_scope,
         )
 
         generation_request = SQLGenerationRequest.from_schema_context(

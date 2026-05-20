@@ -17,6 +17,7 @@ from insightai.api.tracing_middleware import TracingMiddleware
 from insightai.api.v1.router import api_v1_router
 from insightai.domain.exceptions import ConfigurationError
 from insightai.infrastructure.ai.factory import build_ai_components
+from insightai.infrastructure.cache.bootstrap import build_cache
 from insightai.infrastructure.chat.bootstrap import build_chat_session_store
 from insightai.infrastructure.config.settings import AppEnvironment, get_settings
 from insightai.infrastructure.database.bootstrap import (
@@ -27,6 +28,7 @@ from insightai.infrastructure.observability.bootstrap import build_audit_logger
 from insightai.infrastructure.observability.metrics import configure_metrics
 from insightai.infrastructure.observability.tracing import configure_tracing, shutdown_tracing
 from insightai.infrastructure.ratelimit.bootstrap import build_rate_limiter
+from insightai.infrastructure.schema.bootstrap import build_schema_components
 
 logger = get_logger(__name__)
 
@@ -44,6 +46,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     )
 
     app.state.settings = settings
+    app.state.schema = build_schema_components(settings)
 
     try:
         app.state.database = build_database_components(settings)
@@ -60,6 +63,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         kind=app.state.chat_sessions.kind.value,
     )
     app.state.rate_limit = build_rate_limiter(settings)
+    app.state.cache = build_cache(settings)
     app.state.audit = build_audit_logger(settings)
     logger.info(
         "audit_logger_configured",
@@ -79,6 +83,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     yield
 
     shutdown_tracing()
+
+    cache = getattr(app.state, "cache", None)
+    if cache is not None and cache.redis_client is not None:
+        await cache.redis_client.aclose()
+        logger.info("cache_redis_client_closed")
 
     if app.state.database is not None:
         app.state.database.engine.dispose()

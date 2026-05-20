@@ -175,6 +175,10 @@ class GenerateSQLRequest(BaseModel):
     )
     model: str | None = None
     temperature: float = Field(default=0.1, ge=0.0, le=2.0)
+    cache_scope: str | None = Field(
+        default=None,
+        description="Optional cache namespace (e.g. auth subject) for user-scoped schema caching.",
+    )
 
     model_config = {"frozen": True}
 

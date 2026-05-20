@@ -148,7 +148,8 @@ markers = [
     "integration: integration tests (may need DB or network)",
     "streaming: chat SSE streaming tests (mocked LLM + SQLite)",
     "mssql: optional MSSQL integration (INSIGHTAI_MSSQL_INTEGRATION_URL)",
-    "slow: slow tests",
+    "slow: slow or timing-sensitive tests",
+    "performance: Phase 9 cache performance baselines (see docs/PERFORMANCE.md)",
 ]
 
 [tool.coverage.run]

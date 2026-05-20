@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 from sqlalchemy import create_engine, text
 
 from insightai.application.use_cases.run_query import RunQueryUseCase
@@ -62,7 +63,8 @@ def test_executor_applies_settings_max_rows_without_explicit_options() -> None:
     assert result.truncated is True
 
 
-def test_run_query_use_case_applies_settings_defaults() -> None:
+@pytest.mark.asyncio
+async def test_run_query_use_case_applies_settings_defaults() -> None:
     engine = create_engine("sqlite:///:memory:")
     with engine.begin() as conn:
         conn.execute(text("CREATE TABLE accounts_user (id INTEGER PRIMARY KEY, email TEXT)"))
@@ -86,7 +88,7 @@ def test_run_query_use_case_applies_settings_defaults() -> None:
         sql_validator=create_sql_safety_validator(kind=DatabaseKind.SQLITE, settings=settings),
         execution_defaults=defaults,
     )
-    result = use_case.execute(
+    result = await use_case.execute(
         RunQueryRequest.from_sql("SELECT id FROM accounts_user ORDER BY id"),
     )
     assert result.execution_options.max_rows == 1

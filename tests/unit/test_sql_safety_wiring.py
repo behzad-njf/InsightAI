@@ -67,18 +67,20 @@ def test_postprocessor_sqlite_rejects_top_without_mssql_dialect() -> None:
         )
 
 
-def test_run_query_rejects_delete_before_executor() -> None:
+@pytest.mark.asyncio
+async def test_run_query_rejects_delete_before_executor() -> None:
     executor = MagicMock(spec=ReadOnlyQueryExecutor)
     validator = create_sql_safety_validator(kind=DatabaseKind.SQLITE)
     use_case = RunQueryUseCase(executor, sql_validator=validator)
 
     with pytest.raises(ReadOnlySQLViolationError):
-        use_case.execute(RunQueryRequest.from_sql("DELETE FROM accounts_user"))
+        await use_case.execute(RunQueryRequest.from_sql("DELETE FROM accounts_user"))
 
     executor.execute.assert_not_called()
 
 
-def test_run_query_with_shared_bootstrap_validator() -> None:
+@pytest.mark.asyncio
+async def test_run_query_with_shared_bootstrap_validator() -> None:
     engine = create_engine("sqlite:///:memory:")
     with engine.begin() as conn:
         conn.execute(text("CREATE TABLE accounts_user (id INTEGER PRIMARY KEY, email TEXT)"))
@@ -94,7 +96,7 @@ def test_run_query_with_shared_bootstrap_validator() -> None:
         execution_defaults=settings.get_query_execution_options(),
     )
 
-    result = use_case.execute(
+    result = await use_case.execute(
         RunQueryRequest.from_sql("SELECT email FROM accounts_user"),
     )
     assert result.query_result.row_count == 1

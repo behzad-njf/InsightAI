@@ -15,7 +15,7 @@ from insightai.domain.models.ask import (
     AskTimings,
 )
 from insightai.domain.models.query_execution import RunQueryRequest, RunQueryResult
-from insightai.domain.models.sql_generation import GenerateSQLRequest
+from insightai.domain.models.sql_generation import GenerateSQLRequest, GenerateSQLResult
 from insightai.infrastructure.config.settings import Settings, get_settings
 from insightai.infrastructure.logging.setup import get_logger
 from insightai.infrastructure.observability.ask_audit import (
@@ -113,13 +113,8 @@ class AskUseCase:
 
         exec_started = time.perf_counter()
         with start_span("insightai.ask.query_execution"):
-            execution = self._run_query.execute(
-                RunQueryRequest.from_generate_sql(
-                    sql_result,
-                    max_rows=request.max_rows,
-                    timeout_seconds=request.timeout_seconds,
-                    enforce_readonly=request.enforce_readonly,
-                ),
+            execution = await self._run_query.execute(
+                self._build_run_query_request(request, sql_result),
             )
         query_execution_ms = (time.perf_counter() - exec_started) * 1000
         record_ask_pipeline_stage(
@@ -213,13 +208,8 @@ class AskUseCase:
             yield AskStreamEvent.status(AskStreamPhase.EXECUTING_QUERY)
             exec_started = time.perf_counter()
             with start_span("insightai.ask.query_execution", attributes={"insightai.stream": True}):
-                execution = self._run_query.execute(
-                    RunQueryRequest.from_generate_sql(
-                        sql_result,
-                        max_rows=request.max_rows,
-                        timeout_seconds=request.timeout_seconds,
-                        enforce_readonly=request.enforce_readonly,
-                    ),
+                execution = await self._run_query.execute(
+                    self._build_run_query_request(request, sql_result),
                 )
             query_execution_ms = (time.perf_counter() - exec_started) * 1000
             record_ask_pipeline_stage(
@@ -316,7 +306,27 @@ class AskUseCase:
             ),
         )
 
+    def _audit_cache_scope(self) -> str | None:
+        from insightai.infrastructure.observability.context import get_audit_context
+
+        audit = get_audit_context()
+        return audit.auth_subject if audit is not None else None
+
+    def _build_run_query_request(
+        self,
+        request: AskRequest,
+        sql_result: GenerateSQLResult,
+    ) -> RunQueryRequest:
+        return RunQueryRequest.from_generate_sql(
+            sql_result,
+            max_rows=request.max_rows,
+            timeout_seconds=request.timeout_seconds,
+            enforce_readonly=request.enforce_readonly,
+            cache_scope=self._audit_cache_scope(),
+        )
+
     def _build_sql_request(self, request: AskRequest) -> GenerateSQLRequest:
+        cache_scope = self._audit_cache_scope()
         return GenerateSQLRequest(
             question=request.question,
             max_context_tables=request.max_context_tables,
@@ -324,6 +334,7 @@ class AskUseCase:
             database_kind=request.database_kind,
             model=request.sql_model,
             temperature=request.sql_temperature,
+            cache_scope=cache_scope,
         )
 
     def _build_answer_request(

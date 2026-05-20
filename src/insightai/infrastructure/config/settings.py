@@ -239,6 +239,48 @@ class Settings(BaseSettings):
 
     # --- Redis (Phase 9) ---
     redis_url: str = "redis://localhost:6379/0"
+    cache_enabled: bool = Field(
+        default=False,
+        description="Enable application cache (schema/query layers use this in 9.2+).",
+    )
+    cache_store: str = Field(
+        default="memory",
+        description="Cache backend: memory | redis (redis requires optional redis package).",
+    )
+    cache_default_ttl_seconds: int = Field(
+        default=300,
+        ge=1,
+        le=86_400,
+        description="Default TTL for cache entries when not overridden per key.",
+    )
+    cache_key_prefix: str = Field(
+        default="insightai:cache:",
+        description="Namespace prefix for all cache keys.",
+    )
+    cache_schema_context_enabled: bool = Field(
+        default=True,
+        description="Cache Phase 2 schema context results when application cache is enabled.",
+    )
+    cache_schema_context_ttl_seconds: int | None = Field(
+        default=None,
+        description="TTL for schema context entries; uses cache_default_ttl_seconds when unset.",
+    )
+    cache_schema_context_scope_user: bool = Field(
+        default=False,
+        description="Include per-user scope in schema context cache keys (auth subject).",
+    )
+    cache_query_results_enabled: bool = Field(
+        default=True,
+        description="Cache successful read-only query results when application cache is enabled.",
+    )
+    cache_query_results_ttl_seconds: int | None = Field(
+        default=120,
+        description="TTL for query result entries; uses cache_default_ttl_seconds when unset.",
+    )
+    cache_query_results_scope_user: bool = Field(
+        default=True,
+        description="Include per-user scope in query result cache keys (recommended).",
+    )
 
     # --- Schema ---
     schema_markdown_path: Path = Path("schema/database_schema.md")
