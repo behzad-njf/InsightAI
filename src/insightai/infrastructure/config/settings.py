@@ -14,6 +14,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from insightai.domain.exceptions import ConfigurationError
 from insightai.domain.models.auth import ApiAuthMode
 from insightai.domain.models.database import DatabaseKind, QueryExecutionOptions
+from insightai.domain.models.embedding import EmbeddingProviderKind
 from insightai.domain.models.llm import AIFrameworkKind, LLMProviderKind
 from insightai.infrastructure.config.database_url import (
     mssql_url_with_trust_server_certificate,
@@ -81,6 +82,99 @@ class Settings(BaseSettings):
 
     # --- AI framework ---
     ai_framework: AIFrameworkKind = AIFrameworkKind.LLAMAINDEX
+
+    # --- Embeddings / RAG (Phase 10) ---
+    embedding_provider: str = Field(
+        default="local",
+        description="Embedding backend: openai | local (deterministic hash for dev/tests).",
+    )
+    embedding_model: str = Field(
+        default="text-embedding-3-small",
+        description="OpenAI embedding model when embedding_provider=openai.",
+    )
+    embedding_local_model: str = Field(
+        default="deterministic-hash-v1",
+        description="Logical model name for local deterministic embeddings.",
+    )
+    embedding_dimensions: int | None = Field(
+        default=None,
+        ge=8,
+        le=3072,
+        description="Optional vector size override (OpenAI text-embedding-3-* supports reduction).",
+    )
+    embedding_timeout_seconds: int = Field(default=60, ge=1)
+    embedding_max_retries: int = Field(default=2, ge=0)
+    embedding_max_batch_size: int = Field(default=100, ge=1, le=2048)
+    rag_chunk_size: int = Field(
+        default=800,
+        ge=100,
+        le=8000,
+        description="Default max characters per RAG chunk (ingest CLI).",
+    )
+    rag_chunk_overlap: int = Field(
+        default=100,
+        ge=0,
+        le=2000,
+        description="Default character overlap between RAG chunks.",
+    )
+    rag_default_index_path: Path = Field(
+        default=Path("data/rag_index/chunks.jsonl"),
+        description="Default output path for insightai-ingest.",
+    )
+    rag_vector_backend: str = Field(
+        default="pgvector",
+        description="Vector store: pgvector (PostgreSQL) | memory (tests).",
+    )
+    rag_database_url: str | None = Field(
+        default=None,
+        description="PostgreSQL URL with write access for pgvector (defaults to DB_USER/DB_PASSWORD).",
+    )
+    rag_vector_table: str = Field(
+        default="rag_document_chunks",
+        description="Table name for chunk embeddings.",
+    )
+    rag_vector_index_name: str = Field(
+        default="rag_document_chunks_embedding_hnsw_idx",
+        description="HNSW index name on embedding column.",
+    )
+    rag_vector_upsert_batch_size: int = Field(default=100, ge=1, le=5000)
+    rag_search_top_k: int = Field(
+        default=5,
+        ge=1,
+        le=50,
+        description="Default top-k for vector similarity search.",
+    )
+    rag_search_min_score: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="Optional cosine similarity floor for retrieval.",
+    )
+    rag_enabled: bool = Field(
+        default=False,
+        description="Enable hybrid SQL/RAG routing on /chat and /ask.",
+    )
+    rag_router_mode: str = Field(
+        default="heuristic",
+        description="Route classifier: heuristic (keyword-based).",
+    )
+    rag_fallback_to_sql_on_empty_index: bool = Field(
+        default=True,
+        description="When RAG route finds no chunks, fall back to SQL analytics.",
+    )
+    langchain_agent_enabled: bool = Field(
+        default=False,
+        description=(
+            "Use LangChain tool-calling agent for /chat and /ask "
+            "(requires rag_enabled and insightai[langchain])."
+        ),
+    )
+    langchain_agent_max_iterations: int = Field(
+        default=8,
+        ge=1,
+        le=25,
+        description="Max tool-calling iterations for the LangChain agent.",
+    )
 
     # --- Database ---
     database_kind: DatabaseKind = DatabaseKind.MSSQL
@@ -290,10 +384,20 @@ class Settings(BaseSettings):
     def normalize_log_level(cls, value: str) -> str:
         return value.upper()
 
-    @field_validator("schema_markdown_path", mode="before")
+    @field_validator("schema_markdown_path", "rag_default_index_path", mode="before")
     @classmethod
-    def coerce_schema_path(cls, value: str | Path) -> Path:
+    def coerce_path_fields(cls, value: str | Path) -> Path:
         return Path(value)
+
+    @field_validator("embedding_provider", mode="before")
+    @classmethod
+    def coerce_embedding_provider(cls, value: object) -> str:
+        if isinstance(value, EmbeddingProviderKind):
+            return value.value
+        if isinstance(value, str):
+            return value.strip().lower()
+        msg = f"Invalid embedding_provider: {value!r}"
+        raise ValueError(msg)
 
     @field_validator("api_auth_mode", mode="before")
     @classmethod
@@ -378,6 +482,32 @@ class Settings(BaseSettings):
             msg = "Missing OpenAI API key. Set OPENAI_API_KEY in .env."
             raise ConfigurationError(msg)
         return self.openai_api_key.strip()
+
+    def resolved_embedding_dimensions(self) -> int:
+        """Default vector width for the active embedding provider."""
+        if self.embedding_dimensions is not None:
+            return self.embedding_dimensions
+        if EmbeddingProviderKind(self.embedding_provider) == EmbeddingProviderKind.OPENAI:
+            return 1536
+        return 384
+
+    def resolve_rag_database_url(self) -> str:
+        """Writer URL for pgvector (not the readonly analytics connection)."""
+        if self.rag_database_url and self.rag_database_url.strip():
+            return normalize_sqlalchemy_url(self.rag_database_url.strip())
+
+        built = self._build_url_from_components(
+            readonly=False,
+            kind=DatabaseKind.POSTGRESQL,
+        )
+        if built:
+            return normalize_sqlalchemy_url(built)
+
+        msg = (
+            "RAG database URL not configured. Set INSIGHTAI_RAG_DATABASE_URL or "
+            "DB_USER/DB_PASSWORD for PostgreSQL."
+        )
+        raise ConfigurationError(msg)
 
     def get_query_execution_options(self) -> QueryExecutionOptions:
         return QueryExecutionOptions(
@@ -470,6 +600,7 @@ class Settings(BaseSettings):
             "db_readonly_password",
             "database_url",
             "database_readonly_url",
+            "rag_database_url",
         )
         for key in secret_fields:
             if getattr(self, key, None):

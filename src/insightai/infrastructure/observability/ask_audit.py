@@ -22,7 +22,7 @@ def _sum_tokens(*usages: TokenUsage) -> int | None:
 
 
 def token_usage_from_ask_result(result: AskResult) -> TokenUsageSummary:
-    sql_usage = result.sql.sql.usage
+    sql_usage = result.sql.sql.usage if result.sql is not None else TokenUsage()
     answer_usage = result.answer.answer.usage
     return TokenUsageSummary(
         sql_prompt_tokens=sql_usage.prompt_tokens,
@@ -46,12 +46,34 @@ def build_ask_audit_complete(
     question = result.question.strip()
 
     sql_text: str | None = None
-    if settings.observability_log_sql and result.sql.sql.has_sql:
+    if (
+        settings.observability_log_sql
+        and result.sql is not None
+        and result.sql.sql.has_sql
+        and result.execution is not None
+    ):
         sql_text = result.execution.sql.strip() or result.sql.sql.sql.strip()
 
     question_text: str | None = None
     if settings.observability_log_question:
         question_text = question
+
+    schema_table_count = (
+        len(result.sql.schema_context.table_names) if result.sql is not None else 0
+    )
+    tables_used = list(result.sql.sql.tables_used) if result.sql is not None else []
+    row_count = (
+        result.execution.query_result.row_count if result.execution is not None else 0
+    )
+    truncated = (
+        result.execution.query_result.truncated if result.execution is not None else False
+    )
+    sql_model = result.sql.sql.model if result.sql is not None else None
+    sql_provider = (
+        result.sql.sql.provider.value
+        if result.sql is not None and result.sql.sql.provider
+        else None
+    )
 
     return AskAuditComplete(
         request_id=request_id,
@@ -59,20 +81,24 @@ def build_ask_audit_complete(
         session_id=ctx.session_id if ctx else None,
         auth_subject=ctx.auth_subject if ctx else None,
         stream=stream,
-        schema_table_count=len(result.sql.schema_context.table_names),
-        tables_used=list(result.sql.sql.tables_used),
-        row_count=result.execution.query_result.row_count,
-        truncated=result.execution.query_result.truncated,
+        schema_table_count=schema_table_count,
+        tables_used=tables_used,
+        row_count=row_count,
+        truncated=truncated,
         timings=result.timings,
         token_usage=token_usage_from_ask_result(result),
-        sql_model=result.sql.sql.model,
+        sql_model=sql_model,
         answer_model=result.answer.answer.model,
-        sql_provider=result.sql.sql.provider.value if result.sql.sql.provider else None,
+        sql_provider=sql_provider,
         answer_provider=(
             result.answer.answer.provider.value if result.answer.answer.provider else None
         ),
         question_text=question_text,
         sql_text=sql_text,
+        route=result.route.value,
+        rag_source_count=(
+            len(result.rag_retrieval.sources) if result.rag_retrieval is not None else 0
+        ),
     )
 
 

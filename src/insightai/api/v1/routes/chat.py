@@ -17,7 +17,7 @@ from insightai.api.schemas.chat import (
 )
 from insightai.api.sse import format_sse
 from insightai.api.v1.routes import chat_sessions
-from insightai.application.use_cases.ask import AskUseCase
+from insightai.domain.ports.ask_pipeline import IAskPipeline
 from insightai.application.use_cases.chat_session import ChatSessionUseCase
 from insightai.infrastructure.config.settings import Settings
 from insightai.infrastructure.logging.setup import request_id_var
@@ -50,7 +50,7 @@ def _validate_question_length(question: str, settings: Settings) -> None:
 async def chat(
     request: Request,
     body: ChatRequest,
-    use_case: AskUseCase = Depends(get_ask_use_case),
+    use_case: IAskPipeline = Depends(get_ask_use_case),
     session_use_case: ChatSessionUseCase = Depends(get_chat_session_use_case),
     settings: Settings = Depends(get_settings),
 ) -> ChatResponse:
@@ -87,7 +87,7 @@ async def chat(
 async def chat_stream(
     request: Request,
     body: ChatRequest,
-    use_case: AskUseCase = Depends(get_ask_use_case),
+    use_case: IAskPipeline = Depends(get_ask_use_case),
     session_use_case: ChatSessionUseCase = Depends(get_chat_session_use_case),
     settings: Settings = Depends(get_settings),
 ) -> StreamingResponse:

@@ -56,6 +56,15 @@ class AskAuditComplete(BaseModel):
         default=None,
         description="Present only when INSIGHTAI_OBSERVABILITY_LOG_SQL=true.",
     )
+    route: str | None = Field(
+        default=None,
+        description="Hybrid route: sql | rag | both (Phase 10.4).",
+    )
+    rag_source_count: int = Field(
+        default=0,
+        ge=0,
+        description="Number of document chunks retrieved for RAG / hybrid.",
+    )
 
     model_config = {"frozen": True}
 

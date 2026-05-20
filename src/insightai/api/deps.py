@@ -7,6 +7,14 @@ from typing import TYPE_CHECKING, cast
 from fastapi import Request
 
 from insightai.application.use_cases.ask import AskUseCase
+from insightai.application.use_cases.classify_query_route import ClassifyQueryRouteUseCase
+from insightai.application.use_cases.generate_rag_answer import GenerateRAGAnswerUseCase
+from insightai.application.use_cases.hybrid_ask import HybridAskUseCase
+from insightai.application.use_cases.langchain_agent_ask import LangChainAgentAskUseCase
+from insightai.application.use_cases.retrieve_rag_context import RetrieveRAGContextUseCase
+from insightai.domain.exceptions import ConfigurationError
+from insightai.infrastructure.ai.langchain.agent_runner import LangChainAgentRunner
+from insightai.infrastructure.ai.langchain.availability import langchain_available
 from insightai.application.use_cases.build_schema_context import BuildSchemaContextUseCase
 from insightai.application.use_cases.chat_session import ChatSessionUseCase
 from insightai.application.use_cases.generate_answer import GenerateAnswerUseCase
@@ -81,14 +89,62 @@ def get_generate_sql_use_case(request: Request) -> GenerateSQLUseCase:
     )
 
 
-def get_ask_use_case(request: Request) -> AskUseCase:
-    """Full NL → SQL → execute → answer pipeline (requires configured database)."""
-    return AskUseCase(
+def get_ask_use_case(
+    request: Request,
+) -> AskUseCase | HybridAskUseCase | LangChainAgentAskUseCase:
+    """Full NL pipeline; hybrid RAG or LangChain agent when configured."""
+    settings = get_settings(request)
+    sql_ask = AskUseCase(
         get_generate_sql_use_case(request),
         get_run_query_use_case(request),
         get_generate_answer_use_case(request),
-        get_settings(request),
+        settings,
         request.app.state.audit,
+    )
+    rag = getattr(request.app.state, "rag", None)
+    if rag is None or not rag.enabled:
+        return sql_ask
+    if (
+        rag.embedding_provider is None
+        or rag.vector_store is None
+        or rag.query_router is None
+        or rag.rag_answer_generator is None
+    ):
+        return sql_ask
+
+    retrieve_rag = RetrieveRAGContextUseCase(
+        rag.embedding_provider,
+        rag.vector_store,
+        settings,
+    )
+
+    if settings.langchain_agent_enabled:
+        if not langchain_available():
+            raise ConfigurationError(
+                "INSIGHTAI_LANGCHAIN_AGENT_ENABLED requires LangChain. "
+                "Install with: pip install 'insightai[langchain]'",
+            )
+        agent_runner = LangChainAgentRunner(
+            retrieve_rag,
+            get_generate_sql_use_case(request),
+            get_run_query_use_case(request),
+            settings,
+        )
+        return LangChainAgentAskUseCase(
+            agent_runner,
+            get_generate_answer_use_case(request),
+            settings=settings,
+            audit=request.app.state.audit,
+        )
+
+    return HybridAskUseCase(
+        sql_ask,
+        ClassifyQueryRouteUseCase(rag.query_router),
+        retrieve_rag,
+        GenerateRAGAnswerUseCase(rag.rag_answer_generator),
+        get_generate_answer_use_case(request),
+        settings=settings,
+        audit=request.app.state.audit,
     )
 
 

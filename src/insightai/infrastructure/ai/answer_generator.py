@@ -16,6 +16,12 @@ from insightai.infrastructure.ai.answer_response_parser import parse_answer_gene
 from insightai.infrastructure.ai.providers.base import terminal_stream_metadata
 from insightai.infrastructure.config.settings import Settings, get_settings
 from insightai.infrastructure.logging.setup import get_logger
+from insightai.infrastructure.prompts.hybrid_loader import (
+    HybridAnswerPromptBundle,
+    load_hybrid_answer_prompts,
+    load_hybrid_answer_stream_prompts,
+    render_hybrid_answer_messages,
+)
 from insightai.infrastructure.prompts.loader import (
     AnswerGenerationPromptBundle,
     load_answer_generation_prompts,
@@ -48,6 +54,8 @@ class LLMAnswerGenerator(IAnswerGenerator):
         *,
         prompt_bundle: AnswerGenerationPromptBundle | None = None,
         stream_prompt_bundle: AnswerGenerationPromptBundle | None = None,
+        hybrid_prompt_bundle: HybridAnswerPromptBundle | None = None,
+        hybrid_stream_prompt_bundle: HybridAnswerPromptBundle | None = None,
         max_completion_tokens: int = _DEFAULT_MAX_COMPLETION_TOKENS,
         default_max_display_rows: int | None = None,
     ) -> None:
@@ -56,6 +64,10 @@ class LLMAnswerGenerator(IAnswerGenerator):
         self._prompts = prompt_bundle or load_answer_generation_prompts(self._settings)
         self._stream_prompts = stream_prompt_bundle or load_answer_generation_stream_prompts(
             self._settings,
+        )
+        self._hybrid_prompts = hybrid_prompt_bundle or load_hybrid_answer_prompts(self._settings)
+        self._hybrid_stream_prompts = (
+            hybrid_stream_prompt_bundle or load_hybrid_answer_stream_prompts(self._settings)
         )
         self._max_completion_tokens = max_completion_tokens
         self._default_max_display_rows = (
@@ -75,20 +87,33 @@ class LLMAnswerGenerator(IAnswerGenerator):
             request.query_result.rows,
             max_rows=max_display,
         )
-        messages = render_answer_generation_messages(
-            question=request.question,
-            sql=request.sql,
-            query_result=request.query_result,
-            max_display_rows=max_display,
-            settings=self._settings,
-            bundle=self._prompts,
-        )
+        task = "answer_generation"
+        if request.document_context:
+            task = "answer_generation_hybrid"
+            messages = render_hybrid_answer_messages(
+                question=request.question,
+                sql=request.sql,
+                query_result=request.query_result,
+                document_excerpts=request.document_context,
+                max_display_rows=max_display,
+                settings=self._settings,
+                bundle=self._hybrid_prompts,
+            )
+        else:
+            messages = render_answer_generation_messages(
+                question=request.question,
+                sql=request.sql,
+                query_result=request.query_result,
+                max_display_rows=max_display,
+                settings=self._settings,
+                bundle=self._prompts,
+            )
         llm_request = LLMRequest(
             messages=messages,
             model=request.model,
             temperature=request.temperature,
             max_tokens=self._max_completion_tokens,
-            metadata={"task": "answer_generation"},
+            metadata={"task": task},
         )
 
         logger.info(
@@ -127,20 +152,33 @@ class LLMAnswerGenerator(IAnswerGenerator):
             request.query_result.rows,
             max_rows=max_display,
         )
-        messages = render_answer_generation_stream_messages(
-            question=request.question,
-            sql=request.sql,
-            query_result=request.query_result,
-            max_display_rows=max_display,
-            settings=self._settings,
-            bundle=self._stream_prompts,
-        )
+        if request.document_context:
+            messages = render_hybrid_answer_messages(
+                question=request.question,
+                sql=request.sql,
+                query_result=request.query_result,
+                document_excerpts=request.document_context,
+                max_display_rows=max_display,
+                settings=self._settings,
+                bundle=self._hybrid_stream_prompts,
+            )
+            stream_task = "answer_generation_hybrid_stream"
+        else:
+            messages = render_answer_generation_stream_messages(
+                question=request.question,
+                sql=request.sql,
+                query_result=request.query_result,
+                max_display_rows=max_display,
+                settings=self._settings,
+                bundle=self._stream_prompts,
+            )
+            stream_task = "answer_generation_stream"
         llm_request = LLMRequest(
             messages=messages,
             model=request.model,
             temperature=request.temperature,
             max_tokens=self._max_completion_tokens,
-            metadata={"task": "answer_generation_stream"},
+            metadata={"task": stream_task},
         )
 
         logger.info(

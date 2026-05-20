@@ -35,7 +35,7 @@ Typical latency for a full question (SQL + DB + answer) is on the order of **2�
 | 7 | Product API — chat, sessions, auth, rate limits, **SSE streaming** | Complete |
 | 8 | Observability — audit logs, LLM usage, OTEL tracing, Prometheus `/metrics` (optional) | In progress |
 | 9 | Performance — Redis caching | Complete — see [docs/PERFORMANCE.md](docs/PERFORMANCE.md) |
-| 10 | Hybrid RAG — vectors + SQL | Planned |
+| 10 | Hybrid RAG — vectors + SQL | In progress (10.1–10.2: embeddings + [ingest CLI](docs/RAG_INGEST.md)) |
 
 Roadmap detail: [AGENT_PHASES.md](AGENT_PHASES.md). Maintainer guide: [AGENT.md](AGENT.md).
 

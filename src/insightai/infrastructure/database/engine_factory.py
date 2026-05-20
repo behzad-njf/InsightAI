@@ -38,10 +38,21 @@ class DatabaseConnectionFactory(IDatabaseConnectionFactory):
         readonly: bool = True,
     ) -> DatabaseConnectionConfig:
         url = self._settings.resolve_database_url(readonly=readonly)
-        kind = infer_kind_from_url(url) or self._settings.database_kind
+        return self.connection_config_from_url(url, readonly=readonly)
+
+    def connection_config_from_url(
+        self,
+        url: str,
+        *,
+        readonly: bool = False,
+    ) -> DatabaseConnectionConfig:
+        from insightai.infrastructure.config.database_url import normalize_sqlalchemy_url
+
+        normalized = normalize_sqlalchemy_url(url.strip())
+        kind = infer_kind_from_url(normalized) or self._settings.database_kind
         return DatabaseConnectionConfig(
             kind=kind,
-            url=url,
+            url=normalized,
             readonly=readonly,
             echo_sql=self._settings.debug,
         )

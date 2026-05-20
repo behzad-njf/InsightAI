@@ -10,6 +10,7 @@ from insightai.api.schemas.llm import TokenUsageSchema
 from insightai.domain.models.ask import AskRequest as DomainAskRequest
 from insightai.domain.models.ask import AskResult
 from insightai.domain.models.database import DatabaseKind
+from insightai.domain.models.hybrid import QueryRouteKind
 
 
 class AskRequest(BaseModel):
@@ -26,6 +27,7 @@ class AskRequest(BaseModel):
     max_display_rows: int | None = Field(default=None, ge=1, le=500)
     timeout_seconds: int | None = Field(default=None, ge=1, le=600)
     enforce_readonly: bool | None = None
+    route: QueryRouteKind | None = None
 
     def to_domain(self) -> DomainAskRequest:
         return DomainAskRequest(
@@ -40,10 +42,13 @@ class AskRequest(BaseModel):
             max_display_rows=self.max_display_rows,
             timeout_seconds=self.timeout_seconds,
             enforce_readonly=self.enforce_readonly,
+            route=self.route,
         )
 
 
 class AskTimingsSchema(BaseModel):
+    route_classification_ms: float = 0.0
+    rag_retrieval_ms: float = 0.0
     sql_generation_ms: float
     query_execution_ms: float
     answer_generation_ms: float
@@ -83,9 +88,19 @@ class AskResponse(BaseModel):
     sql_model: str | None = None
     answer_model: str | None = None
     provider: str | None = None
+    route: str = QueryRouteKind.SQL.value
+    rag_source_count: int = 0
+    citations: list[int] = Field(
+        default_factory=list,
+        description="1-based document source indices cited in the answer.",
+    )
 
     @classmethod
     def from_domain(cls, result: AskResult) -> AskResponse:
+        if result.execution is None or result.sql is None:
+            msg = "Ask debug response requires SQL pipeline fields (sql/rag-only not supported)."
+            raise ValueError(msg)
+
         columns = [col.name for col in result.execution.query_result.columns]
         provider = result.answer.answer.provider or result.sql.sql.provider
         return cls(
@@ -109,6 +124,8 @@ class AskResponse(BaseModel):
                 execution_time_ms=result.execution.query_result.execution_time_ms,
             ),
             timings=AskTimingsSchema(
+                route_classification_ms=result.timings.route_classification_ms,
+                rag_retrieval_ms=result.timings.rag_retrieval_ms,
                 sql_generation_ms=result.timings.sql_generation_ms,
                 query_execution_ms=result.timings.query_execution_ms,
                 answer_generation_ms=result.timings.answer_generation_ms,
@@ -128,4 +145,9 @@ class AskResponse(BaseModel):
             sql_model=result.sql.sql.model,
             answer_model=result.answer.answer.model,
             provider=provider.value if provider else None,
+            route=result.route.value,
+            rag_source_count=(
+                len(result.rag_retrieval.sources) if result.rag_retrieval is not None else 0
+            ),
+            citations=list(result.answer.answer.citations),
         )

@@ -7,6 +7,7 @@ from typing import Literal, Self
 from pydantic import BaseModel, Field, model_validator
 
 from insightai.domain.models.database import QueryResult  # noqa: TC001
+from insightai.domain.models.hybrid import RAGSourceCitation  # noqa: TC001
 from insightai.domain.models.llm import LLMProviderKind, TokenUsage
 from insightai.domain.models.query_execution import RunQueryResult  # noqa: TC001
 
@@ -25,6 +26,10 @@ class AnswerGenerationRequest(BaseModel):
     )
     model: str | None = Field(default=None, description="Optional LLM model override.")
     temperature: float = Field(default=0.2, ge=0.0, le=2.0)
+    document_context: str | None = Field(
+        default=None,
+        description="Formatted RAG excerpts for hybrid BOTH answers (Phase 10.4).",
+    )
 
     model_config = {"frozen": True}
 
@@ -37,6 +42,7 @@ class AnswerGenerationRequest(BaseModel):
         max_display_rows: int | None = None,
         model: str | None = None,
         temperature: float = 0.2,
+        document_context: str | None = None,
     ) -> Self:
         """Build from Phase 5 execution output."""
         resolved_question = (question or run.question or "").strip()
@@ -50,6 +56,7 @@ class AnswerGenerationRequest(BaseModel):
             max_display_rows=max_display_rows,
             model=model,
             temperature=temperature,
+            document_context=document_context,
         )
 
 
@@ -61,6 +68,10 @@ class AnswerGenerationLLMOutput(BaseModel):
     row_count_cited: int = Field(ge=0)
     truncation_noted: bool = False
     caveats: str | None = None
+    source_citations: list[int] = Field(
+        default_factory=list,
+        description="1-based indices of document excerpts cited (hybrid / RAG answers).",
+    )
 
     model_config = {"frozen": True}
 
@@ -79,6 +90,10 @@ class AnswerGenerationResult(BaseModel):
     model: str | None = None
     provider: LLMProviderKind | None = None
     finish_reason: str | None = None
+    citations: list[int] = Field(
+        default_factory=list,
+        description="1-based indices into ``GenerateAnswerResult.sources`` cited in the answer.",
+    )
 
     model_config = {"frozen": True}
 
@@ -102,6 +117,7 @@ class AnswerGenerationResult(BaseModel):
             row_count=query_result.row_count,
             truncation_noted=truncation_noted,
             caveats=caveats,
+            citations=list(output.source_citations),
             usage=usage or TokenUsage(),
             model=model,
             provider=provider,
@@ -168,6 +184,10 @@ class GenerateAnswerRequest(BaseModel):
     max_display_rows: int | None = Field(default=None, ge=1, le=500)
     model: str | None = None
     temperature: float = Field(default=0.2, ge=0.0, le=2.0)
+    document_context: str | None = Field(
+        default=None,
+        description="Formatted RAG excerpts appended to the answer prompt (Phase 10.4).",
+    )
 
     model_config = {"frozen": True}
 
@@ -194,6 +214,7 @@ class GenerateAnswerRequest(BaseModel):
                 max_display_rows=self.max_display_rows,
                 model=self.model,
                 temperature=self.temperature,
+                document_context=self.document_context,
             )
         assert self.query_result is not None
         assert self.sql is not None
@@ -204,6 +225,7 @@ class GenerateAnswerRequest(BaseModel):
             max_display_rows=self.max_display_rows,
             model=self.model,
             temperature=self.temperature,
+            document_context=self.document_context,
         )
 
 
@@ -214,6 +236,10 @@ class GenerateAnswerResult(BaseModel):
     sql: str
     query_result: QueryResult
     answer: AnswerGenerationResult
+    sources: list[RAGSourceCitation] = Field(
+        default_factory=list,
+        description="Retrieved document chunks when RAG or hybrid path ran.",
+    )
 
     model_config = {"frozen": True}
 
@@ -222,6 +248,8 @@ class GenerateAnswerResult(BaseModel):
         cls,
         request: GenerateAnswerRequest,
         answer: AnswerGenerationResult,
+        *,
+        sources: list[RAGSourceCitation] | None = None,
     ) -> Self:
         gen = request.to_generation_request()
         return cls(
@@ -229,6 +257,7 @@ class GenerateAnswerResult(BaseModel):
             sql=gen.sql,
             query_result=gen.query_result,
             answer=answer,
+            sources=list(sources or []),
         )
 
 

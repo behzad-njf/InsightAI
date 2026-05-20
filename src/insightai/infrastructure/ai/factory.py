@@ -12,7 +12,8 @@ from insightai.domain.ports.llm_provider import ILLMProvider
 from insightai.domain.ports.sql_generator import ISQLGenerator
 from insightai.domain.ports.sql_safety import ISQLSafetyValidator
 from insightai.infrastructure.ai.answer_generator import LLMAnswerGenerator
-from insightai.infrastructure.ai.frameworks.langchain_stub import LangChainFrameworkStub
+from insightai.infrastructure.ai.frameworks.langchain_adapter import LangChainFrameworkAdapter
+from insightai.infrastructure.ai.langchain.availability import langchain_available
 from insightai.infrastructure.ai.frameworks.llamaindex_adapter import (
     LlamaIndexFrameworkAdapter,
 )
@@ -67,7 +68,13 @@ def create_ai_framework(
     if settings.ai_framework == AIFrameworkKind.LLAMAINDEX:
         return LlamaIndexFrameworkAdapter(provider, settings)
     if settings.ai_framework == AIFrameworkKind.LANGCHAIN:
-        return LangChainFrameworkStub(provider)
+        if not langchain_available():
+            msg = (
+                "INSIGHTAI_AI_FRAMEWORK=langchain requires LangChain packages. "
+                "Install with: pip install 'insightai[langchain]'"
+            )
+            raise LLMConfigurationError(msg)
+        return LangChainFrameworkAdapter(provider, settings)
     msg = f"Unsupported AI framework: {settings.ai_framework}"
     raise LLMConfigurationError(msg)
 

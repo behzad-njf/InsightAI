@@ -48,6 +48,30 @@ class LLMConfigurationError(LLMError):
     """LLM provider configuration is invalid (missing key, model, etc.)."""
 
 
+class EmbeddingError(InsightAIError):
+    """Base class for embedding provider failures (Phase 10)."""
+
+
+class EmbeddingProviderError(EmbeddingError):
+    """Embedding provider returned an error or invalid response."""
+
+
+class EmbeddingProviderUnavailableError(EmbeddingProviderError):
+    """Embedding provider is unreachable or rate-limited after retries."""
+
+
+class EmbeddingConfigurationError(EmbeddingError):
+    """Embedding provider configuration is invalid (missing key, model, etc.)."""
+
+
+class VectorStoreError(InsightAIError):
+    """Vector store / pgvector failures (Phase 10)."""
+
+
+class VectorStoreConfigurationError(VectorStoreError):
+    """Vector store is not configured or pgvector is unavailable."""
+
+
 class AIFrameworkError(InsightAIError):
     """AI framework adapter failure (LlamaIndex, LangChain, etc.)."""
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -22,7 +23,7 @@ from insightai.infrastructure.ai.factory import (
     create_llm_provider,
     create_sql_generator,
 )
-from insightai.infrastructure.ai.frameworks.langchain_stub import LangChainFrameworkStub
+from insightai.infrastructure.ai.frameworks.langchain_adapter import LangChainFrameworkAdapter
 from insightai.infrastructure.ai.providers.groq_provider import GroqLLMProvider
 from insightai.infrastructure.ai.providers.observing_provider import ObservingLLMProvider
 from insightai.infrastructure.ai.providers.openai_provider import OpenAILLMProvider
@@ -240,20 +241,27 @@ def test_llamaindex_framework_delegates() -> None:
 
 
 @pytest.mark.asyncio
-async def test_langchain_stub_raises() -> None:
+async def test_langchain_adapter_delegates_complete() -> None:
     mock_provider = MagicMock()
-    framework = LangChainFrameworkStub(mock_provider)
-
-    with pytest.raises(AIFrameworkNotSupportedError):
-        await framework.complete(_user_request())
+    mock_provider.complete = AsyncMock(return_value=MagicMock())
+    settings = _settings(groq_api_key="gsk-test")
+    framework = LangChainFrameworkAdapter(mock_provider, settings)
+    await framework.complete(_user_request())
+    mock_provider.complete.assert_awaited_once()
 
 
 @pytest.mark.asyncio
-async def test_langchain_stub_complete_stream_raises() -> None:
-    framework = LangChainFrameworkStub(MagicMock())
-    with pytest.raises(AIFrameworkNotSupportedError):
-        async for _ in framework.complete_stream(_user_request()):
-            pass
+async def test_langchain_adapter_complete_stream_delegates() -> None:
+    mock_provider = MagicMock()
+
+    async def _stream(_request: object) -> AsyncIterator[object]:
+        yield MagicMock(text="hi")
+
+    mock_provider.complete_stream = _stream
+    settings = _settings(groq_api_key="gsk-test")
+    framework = LangChainFrameworkAdapter(mock_provider, settings)
+    chunks = [chunk async for chunk in framework.complete_stream(_user_request())]
+    assert chunks
 
 
 def _user_request(**kwargs: object) -> LLMRequest:

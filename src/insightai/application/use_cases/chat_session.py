@@ -95,7 +95,15 @@ class ChatSessionUseCase:
                 content=result.answer.answer.answer,
                 created_at=datetime.now(UTC),
                 request_id=request_id,
-                row_count=result.execution.query_result.row_count,
-                sql=result.execution.sql if store_sql else None,
+                row_count=(
+                    result.execution.query_result.row_count
+                    if result.execution is not None
+                    else result.answer.answer.row_count
+                ),
+                sql=(
+                    result.execution.sql
+                    if store_sql and result.execution is not None
+                    else None
+                ),
             ),
         )

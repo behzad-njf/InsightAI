@@ -14,6 +14,7 @@ from insightai.domain.models.ask import (
     AskStreamPhase,
     AskTimings,
 )
+from insightai.domain.models.hybrid import QueryRouteKind
 from insightai.domain.models.query_execution import RunQueryRequest, RunQueryResult
 from insightai.domain.models.sql_generation import GenerateSQLRequest, GenerateSQLResult
 from insightai.infrastructure.config.settings import Settings, get_settings
@@ -65,7 +66,7 @@ class AskUseCase:
 
     async def execute(self, request: AskRequest) -> AskResult:
         try:
-            return await self._execute_pipeline(request, stream=False)
+            return await self.execute_sql_pipeline(request, stream=False)
         except SQLGenerationError as exc:
             self._log_failure(
                 request,
@@ -83,7 +84,8 @@ class AskUseCase:
             )
             raise
 
-    async def _execute_pipeline(self, request: AskRequest, *, stream: bool) -> AskResult:
+    async def execute_sql_pipeline(self, request: AskRequest, *, stream: bool) -> AskResult:
+        """Run schema → SQL → execute → answer without hybrid routing (Phase 6.4)."""
         total_started = time.perf_counter()
         logger.info(
             "ask_pipeline_start",
@@ -143,6 +145,7 @@ class AskUseCase:
 
         result = AskResult(
             question=request.question,
+            route=QueryRouteKind.SQL,
             sql=sql_result,
             execution=execution,
             answer=answer,
