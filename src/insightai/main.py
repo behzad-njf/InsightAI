@@ -27,8 +27,9 @@ from insightai.infrastructure.logging.setup import configure_logging, get_logger
 from insightai.infrastructure.observability.bootstrap import build_audit_logger
 from insightai.infrastructure.observability.metrics import configure_metrics
 from insightai.infrastructure.observability.tracing import configure_tracing, shutdown_tracing
-from insightai.infrastructure.ratelimit.bootstrap import build_rate_limiter
 from insightai.infrastructure.rag.bootstrap import build_rag_components
+from insightai.infrastructure.rag.knowledge_sync import sync_knowledge_on_startup
+from insightai.infrastructure.ratelimit.bootstrap import build_rate_limiter
 from insightai.infrastructure.schema.bootstrap import build_schema_components
 
 logger = get_logger(__name__)
@@ -66,6 +67,16 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.rate_limit = build_rate_limiter(settings)
     app.state.cache = build_cache(settings)
     app.state.rag = build_rag_components(settings)
+    if (
+        app.state.rag.enabled
+        and app.state.rag.embedding_provider is not None
+        and app.state.rag.vector_store is not None
+    ):
+        await sync_knowledge_on_startup(
+            settings=settings,
+            embedding_provider=app.state.rag.embedding_provider,
+            vector_store=app.state.rag.vector_store,
+        )
     app.state.audit = build_audit_logger(settings)
     logger.info(
         "audit_logger_configured",

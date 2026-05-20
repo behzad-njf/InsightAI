@@ -75,6 +75,7 @@ dev = [
 insightai = "insightai.main:run"
 insightai-ingest = "insightai.cli.ingest:main"
 insightai-rag-load = "insightai.cli.rag_load:main"
+insightai-knowledge-sync = "insightai.cli.knowledge_sync:main"
 
 [project.urls]
 Documentation = "https://github.com/mrhib/InsightAI#readme"

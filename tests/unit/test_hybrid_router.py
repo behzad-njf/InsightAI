@@ -14,6 +14,7 @@ from insightai.infrastructure.rag.heuristic_router import HeuristicQueryRouter
     [
         ("How many children are enrolled per classroom?", QueryRouteKind.SQL),
         ("What is the campus policy on late pickup?", QueryRouteKind.RAG),
+        ("What is this system for?", QueryRouteKind.RAG),
         (
             "According to the handbook, how many staff are required per classroom?",
             QueryRouteKind.BOTH,

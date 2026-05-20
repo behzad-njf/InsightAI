@@ -121,6 +121,18 @@ class Settings(BaseSettings):
         default=Path("data/rag_index/chunks.jsonl"),
         description="Default output path for insightai-ingest.",
     )
+    rag_knowledge_path: Path = Field(
+        default=Path("Knowledge"),
+        description="Business documents (md/txt/pdf) ingested for RAG at startup.",
+    )
+    rag_sync_knowledge_on_startup: bool = Field(
+        default=True,
+        description="When RAG is enabled, ingest Knowledge/ and load vectors on app startup.",
+    )
+    rag_sync_knowledge_force: bool = Field(
+        default=False,
+        description="Re-ingest Knowledge/ on every startup even if the vector store is non-empty.",
+    )
     rag_vector_backend: str = Field(
         default="pgvector",
         description="Vector store: pgvector (PostgreSQL) | memory (tests).",
@@ -384,7 +396,12 @@ class Settings(BaseSettings):
     def normalize_log_level(cls, value: str) -> str:
         return value.upper()
 
-    @field_validator("schema_markdown_path", "rag_default_index_path", mode="before")
+    @field_validator(
+        "schema_markdown_path",
+        "rag_default_index_path",
+        "rag_knowledge_path",
+        mode="before",
+    )
     @classmethod
     def coerce_path_fields(cls, value: str | Path) -> Path:
         return Path(value)
@@ -482,6 +499,20 @@ class Settings(BaseSettings):
             msg = "Missing OpenAI API key. Set OPENAI_API_KEY in .env."
             raise ConfigurationError(msg)
         return self.openai_api_key.strip()
+
+    def resolved_rag_knowledge_path(self) -> Path:
+        """Absolute path to the Knowledge/ folder under the project root."""
+        path = self.rag_knowledge_path
+        if path.is_absolute():
+            return path.resolve()
+        return (self.project_root / path).resolve()
+
+    def resolved_rag_default_index_path(self) -> Path:
+        """Absolute path to the default JSONL index written by ingest."""
+        path = self.rag_default_index_path
+        if path.is_absolute():
+            return path.resolve()
+        return (self.project_root / path).resolve()
 
     def resolved_embedding_dimensions(self) -> int:
         """Default vector width for the active embedding provider."""

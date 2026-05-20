@@ -10,6 +10,9 @@ database_schema.md
 AGENT.md
 AGENT_PHASES.md
 
+Knowledge/*
+!Knowledge/README.md
+
 
 # Credentials (never commit)
 *.pem

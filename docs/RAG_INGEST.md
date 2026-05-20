@@ -1,5 +1,32 @@
 # RAG document ingestion (Phase 10.2)
 
+## Knowledge folder (business context)
+
+Drop **policies, help, security notes, and product copy** into [`Knowledge/`](../Knowledge/) (`.md`, `.txt`, `.pdf`). When RAG is enabled, the API **syncs this folder on startup** so questions like *"What is this system for?"* are answered from your docs—not from SQL.
+
+| Setting | Default | Purpose |
+|---------|---------|---------|
+| `INSIGHTAI_RAG_ENABLED` | `false` in code; set `true` to use Knowledge | Turns on hybrid RAG + startup sync |
+| `INSIGHTAI_RAG_KNOWLEDGE_PATH` | `Knowledge` | Folder to ingest |
+| `INSIGHTAI_RAG_SYNC_KNOWLEDGE_ON_STARTUP` | `true` | Ingest + load vectors when the API starts |
+| `INSIGHTAI_RAG_SYNC_KNOWLEDGE_FORCE` | `false` | Re-ingest even if the vector store already has chunks |
+
+```bash
+# Dev: in-memory vectors (no Postgres)
+INSIGHTAI_RAG_ENABLED=true \
+INSIGHTAI_RAG_VECTOR_BACKEND=memory \
+INSIGHTAI_EMBEDDING_PROVIDER=local \
+uvicorn insightai.main:app --reload
+
+# Manual refresh after editing Knowledge/
+insightai-knowledge-sync
+insightai-knowledge-sync --force   # reload when store already populated
+```
+
+See [`Knowledge/README.md`](../Knowledge/README.md) for layout examples.
+
+---
+
 The `insightai-ingest` CLI chunks documents, generates embeddings, and writes a **local JSONL index** for Phase 10.3 (pgvector) to load later.
 
 ## Supported sources

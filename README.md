@@ -39,6 +39,10 @@ Typical latency for a full question (SQL + DB + answer) is on the order of **2â€
 
 Roadmap detail: [AGENT_PHASES.md](AGENT_PHASES.md). Maintainer guide: [AGENT.md](AGENT.md).
 
+### Business knowledge (`Knowledge/`)
+
+Put policies, help text, security notes, and product copy in [`Knowledge/`](Knowledge/) (`.md`, `.txt`, `.pdf`). With RAG enabled, the API **ingests this folder on startup** so questions like *"What is this system for?"* are answered from your documents. See [Knowledge/README.md](Knowledge/README.md) and [docs/RAG_INGEST.md](docs/RAG_INGEST.md).
+
 ---
 
 ## Features
