@@ -7,6 +7,7 @@ from collections.abc import AsyncIterator
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
+from insightai.api.audit_context import bind_chat_audit_context
 from insightai.api.chat_session_resolve import resolve_chat_session_id
 from insightai.api.deps import get_ask_use_case, get_chat_session_use_case, get_settings
 from insightai.api.schemas.chat import (
@@ -65,6 +66,7 @@ async def chat(
     session_id = resolve_chat_session_id(request, body)
     if session_id:
         await session_use_case.require_session(session_id)
+    bind_chat_audit_context(request, session_id=session_id)
 
     result = await use_case.execute(body.to_domain())
 
@@ -116,6 +118,7 @@ async def chat_stream(
     session_id = resolve_chat_session_id(request, body)
     if session_id:
         await session_use_case.require_session(session_id)
+    bind_chat_audit_context(request, session_id=session_id)
 
     response_request = body.model_copy(update={"session_id": session_id})
 

@@ -146,6 +146,44 @@ class Settings(BaseSettings):
         description="Enable POST /api/v1/chat/stream (SSE). When false, returns HTTP 404.",
     )
 
+    # --- Observability (Phase 8) ---
+    observability_audit_enabled: bool = Field(
+        default=True,
+        description="Emit ask_audit_* structured events for /chat and /ask pipelines.",
+    )
+    observability_log_sql: bool = Field(
+        default=False,
+        description="Include executed SQL in audit events (off by default — PII risk).",
+    )
+    observability_log_question: bool = Field(
+        default=False,
+        description="Include raw question text in audit events (off by default — PII risk).",
+    )
+    observability_llm_usage_enabled: bool = Field(
+        default=True,
+        description="Emit llm_usage audit event after each LLM provider call.",
+    )
+    observability_tracing_enabled: bool = Field(
+        default=False,
+        description="Enable OpenTelemetry traces (requires pip install insightai[otel]).",
+    )
+    observability_otlp_endpoint: str | None = Field(
+        default=None,
+        description="OTLP HTTP traces endpoint (e.g. http://localhost:4318/v1/traces).",
+    )
+    observability_service_name: str = Field(
+        default="insightai",
+        description="OpenTelemetry service.name resource attribute.",
+    )
+    observability_service_version: str = Field(
+        default="0.1.0",
+        description="OpenTelemetry service.version resource attribute.",
+    )
+    observability_metrics_enabled: bool = Field(
+        default=False,
+        description="Expose GET /metrics for Prometheus (pip install insightai[prometheus]).",
+    )
+
     # --- API authentication (Phase 7.4) ---
     api_auth_mode: ApiAuthMode = Field(
         default=ApiAuthMode.NONE,

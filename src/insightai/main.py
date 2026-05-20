@@ -10,7 +10,10 @@ from fastapi import FastAPI
 
 from insightai import __version__
 from insightai.api.exception_handlers import register_exception_handlers
+from insightai.api.metrics_middleware import MetricsMiddleware
 from insightai.api.middleware import RequestIdMiddleware
+from insightai.api.routes.metrics import router as metrics_router
+from insightai.api.tracing_middleware import TracingMiddleware
 from insightai.api.v1.router import api_v1_router
 from insightai.domain.exceptions import ConfigurationError
 from insightai.infrastructure.ai.factory import build_ai_components
@@ -20,6 +23,9 @@ from insightai.infrastructure.database.bootstrap import (
     build_database_components,
 )
 from insightai.infrastructure.logging.setup import configure_logging, get_logger
+from insightai.infrastructure.observability.bootstrap import build_audit_logger
+from insightai.infrastructure.observability.metrics import configure_metrics
+from insightai.infrastructure.observability.tracing import configure_tracing, shutdown_tracing
 from insightai.infrastructure.ratelimit.bootstrap import build_rate_limiter
 
 logger = get_logger(__name__)
@@ -54,8 +60,25 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         kind=app.state.chat_sessions.kind.value,
     )
     app.state.rate_limit = build_rate_limiter(settings)
+    app.state.audit = build_audit_logger(settings)
+    logger.info(
+        "audit_logger_configured",
+        enabled=settings.observability_audit_enabled,
+        log_sql=settings.observability_log_sql,
+        log_question=settings.observability_log_question,
+        llm_usage=settings.observability_llm_usage_enabled,
+    )
+    tracing_settings = settings.model_copy(
+        update={"observability_service_version": __version__},
+    )
+    app.state.tracing_enabled = configure_tracing(tracing_settings)
+    app.state.metrics_enabled = configure_metrics(settings)
+    if app.state.metrics_enabled:
+        logger.info("prometheus_metrics_enabled", path="/metrics")
 
     yield
+
+    shutdown_tracing()
 
     if app.state.database is not None:
         app.state.database.engine.dispose()
@@ -75,8 +98,11 @@ def create_app() -> FastAPI:
         debug=settings.debug,
     )
     app.add_middleware(RequestIdMiddleware)
+    app.add_middleware(TracingMiddleware)
+    app.add_middleware(MetricsMiddleware)
     _configure_development_cors(app, settings)
     register_exception_handlers(app)
+    app.include_router(metrics_router)
     app.include_router(api_v1_router)
     return app
 

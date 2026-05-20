@@ -17,9 +17,11 @@ from insightai.infrastructure.ai.frameworks.llamaindex_adapter import (
     LlamaIndexFrameworkAdapter,
 )
 from insightai.infrastructure.ai.providers.groq_provider import GroqLLMProvider
+from insightai.infrastructure.ai.providers.observing_provider import ObservingLLMProvider
 from insightai.infrastructure.ai.providers.openai_provider import OpenAILLMProvider
 from insightai.infrastructure.ai.sql_generator import LLMSQLGenerator
 from insightai.infrastructure.config.settings import Settings, get_settings
+from insightai.infrastructure.observability.bootstrap import build_audit_logger
 from insightai.infrastructure.security.composite_sql_validator import create_sql_safety_validator
 
 
@@ -34,8 +36,8 @@ class AIComponents:
     answer_generator: IAnswerGenerator
 
 
-def create_llm_provider(settings: Settings | None = None) -> ILLMProvider:
-    """Instantiate the configured LLM provider (``INSIGHTAI_LLM_PROVIDER``)."""
+def create_raw_llm_provider(settings: Settings | None = None) -> ILLMProvider:
+    """Instantiate the configured SDK provider without observability wrapping."""
     settings = settings or get_settings()
     if settings.llm_provider == LLMProviderKind.GROQ:
         return GroqLLMProvider(settings)
@@ -43,6 +45,15 @@ def create_llm_provider(settings: Settings | None = None) -> ILLMProvider:
         return OpenAILLMProvider(settings)
     msg = f"Unsupported LLM provider: {settings.llm_provider}"
     raise LLMConfigurationError(msg)
+
+
+def create_llm_provider(settings: Settings | None = None) -> ILLMProvider:
+    """Instantiate the configured LLM provider (``INSIGHTAI_LLM_PROVIDER``)."""
+    settings = settings or get_settings()
+    raw = create_raw_llm_provider(settings)
+    if settings.observability_audit_enabled and settings.observability_llm_usage_enabled:
+        return ObservingLLMProvider(raw, settings, build_audit_logger(settings))
+    return raw
 
 
 def create_ai_framework(

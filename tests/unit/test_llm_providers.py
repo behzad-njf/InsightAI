@@ -24,6 +24,7 @@ from insightai.infrastructure.ai.factory import (
 )
 from insightai.infrastructure.ai.frameworks.langchain_stub import LangChainFrameworkStub
 from insightai.infrastructure.ai.providers.groq_provider import GroqLLMProvider
+from insightai.infrastructure.ai.providers.observing_provider import ObservingLLMProvider
 from insightai.infrastructure.ai.providers.openai_provider import OpenAILLMProvider
 from insightai.infrastructure.ai.sql_generator import LLMSQLGenerator
 from insightai.infrastructure.config.settings import Settings
@@ -201,7 +202,8 @@ def test_factory_selects_groq() -> None:
         return_value=MagicMock(),
     ):
         provider = create_llm_provider(settings)
-    assert isinstance(provider, GroqLLMProvider)
+    assert isinstance(provider, ObservingLLMProvider)
+    assert isinstance(provider._inner, GroqLLMProvider)  # noqa: SLF001
 
 
 def test_factory_selects_openai() -> None:
@@ -214,7 +216,8 @@ def test_factory_selects_openai() -> None:
         return_value=MagicMock(),
     ):
         provider = create_llm_provider(settings)
-    assert isinstance(provider, OpenAILLMProvider)
+    assert isinstance(provider, ObservingLLMProvider)
+    assert isinstance(provider._inner, OpenAILLMProvider)  # noqa: SLF001
 
 
 def test_llamaindex_framework_delegates() -> None:

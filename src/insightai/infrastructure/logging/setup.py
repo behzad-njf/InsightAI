@@ -13,7 +13,7 @@ from structlog.typing import EventDict, WrappedLogger
 
 from insightai.infrastructure.config.settings import LogFormat, Settings, get_settings
 
-# Correlation ID for request tracing (middleware sets this in Step 7).
+# Correlation ID for request tracing (middleware sets this per request).
 request_id_var: ContextVar[str | None] = ContextVar("request_id", default=None)
 
 
@@ -25,6 +25,23 @@ def _add_request_id(
     request_id = request_id_var.get()
     if request_id:
         event_dict["request_id"] = request_id
+    return event_dict
+
+
+def _add_audit_context(
+    logger: WrappedLogger,
+    method_name: str,
+    event_dict: EventDict,
+) -> EventDict:
+    from insightai.infrastructure.observability.context import get_audit_context
+
+    ctx = get_audit_context()
+    if ctx is None:
+        return event_dict
+    if ctx.session_id:
+        event_dict["session_id"] = ctx.session_id
+    if ctx.auth_subject:
+        event_dict["auth_subject"] = ctx.auth_subject
     return event_dict
 
 
@@ -43,6 +60,7 @@ def configure_logging(settings: Settings | None = None) -> None:
         structlog.stdlib.add_logger_name,
         structlog.processors.TimeStamper(fmt="iso"),
         _add_request_id,
+        _add_audit_context,
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
     ]

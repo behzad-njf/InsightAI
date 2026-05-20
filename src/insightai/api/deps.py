@@ -77,6 +77,7 @@ def get_ask_use_case(request: Request) -> AskUseCase:
         get_run_query_use_case(request),
         get_generate_answer_use_case(request),
         get_settings(request),
+        request.app.state.audit,
     )
 
 

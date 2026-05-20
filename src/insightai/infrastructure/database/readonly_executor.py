@@ -24,6 +24,8 @@ from insightai.infrastructure.database.dbapi_errors import raise_for_dbapi_error
 from insightai.infrastructure.database.dialect import wrap_with_row_cap
 from insightai.infrastructure.database.serialization import serialize_value
 from insightai.infrastructure.logging.setup import get_logger
+from insightai.infrastructure.observability.metrics import record_db_query
+from insightai.infrastructure.observability.tracing import set_span_attributes, start_span
 
 if TYPE_CHECKING:
     from sqlalchemy.engine import Engine
@@ -88,21 +90,52 @@ class ReadOnlyQueryExecutor(IReadOnlyQueryExecutor):
         )
 
         started = time.perf_counter()
+        outcome = "success"
         try:
-            with self._engine.connect() as connection:
+            with start_span(
+                "insightai.db.query",
+                attributes={
+                    "db.system": self._kind.value,
+                    "db.operation": "select",
+                },
+            ), self._engine.connect() as connection:
                 cursor = connection.execution_options(
                     timeout=opts.timeout_seconds,
                 ).execute(text(wrapped_sql))
                 column_names = list(cursor.keys())
                 raw_rows = cursor.fetchall()
         except DBAPIError as exc:
+            outcome = "error"
+            record_db_query(
+                db_system=self._kind.value,
+                duration_seconds=time.perf_counter() - started,
+                outcome=outcome,
+            )
             raise_for_dbapi_error(exc, timeout_seconds=opts.timeout_seconds)
         except SQLAlchemyError as exc:
+            outcome = "error"
+            record_db_query(
+                db_system=self._kind.value,
+                duration_seconds=time.perf_counter() - started,
+                outcome=outcome,
+            )
             raise DatabaseQueryError(str(exc)) from exc
 
         elapsed_ms = (time.perf_counter() - started) * 1000
+        record_db_query(
+            db_system=self._kind.value,
+            duration_seconds=elapsed_ms / 1000,
+            outcome=outcome,
+        )
         truncated = len(raw_rows) > opts.max_rows
         limited_rows = raw_rows[: opts.max_rows]
+        set_span_attributes(
+            {
+                "db.row_count": len(limited_rows),
+                "db.execution_time_ms": round(elapsed_ms, 2),
+                "db.truncated": truncated,
+            },
+        )
 
         columns = [QueryColumn(name=name, type_name=None) for name in column_names]
         rows = [

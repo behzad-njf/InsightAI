@@ -10,6 +10,7 @@ from insightai.api.deps import get_settings
 from insightai.domain.models.auth import AuthenticatedPrincipal
 from insightai.infrastructure.auth.service import authenticate_request
 from insightai.infrastructure.config.settings import Settings
+from insightai.infrastructure.observability.context import bind_audit_context
 
 
 async def require_api_auth(
@@ -29,4 +30,5 @@ async def require_api_auth(
         api_key_header=x_api_key,
     )
     request.state.principal = principal
+    bind_audit_context(auth_subject=principal.subject)
     return principal

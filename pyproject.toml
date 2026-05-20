@@ -42,6 +42,18 @@ dependencies = [
 [project.optional-dependencies]
 mssql = ["pyodbc>=5.2.0"]
 redis = ["redis>=5.0.0"]
+otel = [
+    "opentelemetry-api>=1.28.0",
+    "opentelemetry-sdk>=1.28.0",
+    "opentelemetry-exporter-otlp-proto-http>=1.28.0",
+]
+prometheus = ["prometheus-client>=0.21.0"]
+observability = [
+    "opentelemetry-api>=1.28.0",
+    "opentelemetry-sdk>=1.28.0",
+    "opentelemetry-exporter-otlp-proto-http>=1.28.0",
+    "prometheus-client>=0.21.0",
+]
 dev = [
     "pyodbc>=5.2.0",
     "pytest>=8.3.0",
@@ -94,6 +106,8 @@ known-first-party = ["insightai"]
 "src/insightai/domain/models/sql_generation.py" = ["TC001"]
 "src/insightai/domain/models/chat_session.py" = ["TC003"]
 "src/insightai/domain/models/llm.py" = ["TC003"]
+"src/insightai/domain/models/audit.py" = ["TC001"]
+"src/insightai/infrastructure/observability/**/*.py" = ["TC001", "TC003"]
 "src/insightai/api/**/*.py" = ["TC001", "TC002", "TC003"]
 "src/insightai/main.py" = ["TC003"]
 "tests/**/*.py" = ["TC002", "TC003"]
@@ -120,6 +134,8 @@ module = [
     "llama_index_core.*",
     "pyodbc.*",
     "redis.*",
+    "opentelemetry.*",
+    "prometheus_client.*",
 ]
 ignore_missing_imports = true
 

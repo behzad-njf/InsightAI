@@ -33,7 +33,7 @@ Typical latency for a full question (SQL + DB + answer) is on the order of **2�
 | 5 | Query execution — timeouts, row caps, MSSQL/Postgres/SQLite | Complete |
 | 6 | Answer generation — grounded summaries from query results | Complete |
 | 7 | Product API — chat, sessions, auth, rate limits, **SSE streaming** | Complete |
-| 8 | Observability — audit logs, metrics, tracing | Planned |
+| 8 | Observability — audit logs, LLM usage, OTEL tracing, Prometheus `/metrics` (optional) | In progress |
 | 9 | Performance — Redis caching | Planned |
 | 10 | Hybrid RAG — vectors + SQL | Planned |
 
