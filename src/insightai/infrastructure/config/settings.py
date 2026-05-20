@@ -80,6 +80,32 @@ class Settings(BaseSettings):
     openai_timeout_seconds: int = Field(default=60, ge=1)
     openai_max_retries: int = Field(default=2, ge=0)
 
+    openrouter_api_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "OPENROUTER_API_KEY",
+            "INSIGHTAI_OPENROUTER_API_KEY",
+        ),
+    )
+    openrouter_model: str = Field(
+        default="openai/gpt-4o-mini",
+        description="OpenRouter model slug (provider/model), e.g. anthropic/claude-3.5-haiku.",
+    )
+    openrouter_base_url: str = Field(
+        default="https://openrouter.ai/api/v1",
+        description="OpenRouter API base (OpenAI-compatible); used by LlamaIndex/LangChain.",
+    )
+    openrouter_timeout_seconds: int = Field(default=60, ge=1)
+    openrouter_max_retries: int = Field(default=2, ge=0)
+    openrouter_http_referer: str | None = Field(
+        default=None,
+        description="Optional HTTP-Referer header for OpenRouter rankings (your app URL).",
+    )
+    openrouter_app_title: str | None = Field(
+        default="InsightAI",
+        description="Optional X-Title header sent to OpenRouter.",
+    )
+
     # --- AI framework ---
     ai_framework: AIFrameworkKind = AIFrameworkKind.LLAMAINDEX
 
@@ -480,12 +506,16 @@ class Settings(BaseSettings):
             return self.require_groq_api_key()
         if self.llm_provider == LLMProviderKind.OPENAI:
             return self.require_openai_api_key()
+        if self.llm_provider == LLMProviderKind.OPENROUTER:
+            return self.require_openrouter_api_key()
         msg = f"Unsupported LLM provider: {self.llm_provider}"
         raise ConfigurationError(msg)
 
     def get_active_llm_model(self) -> str:
         if self.llm_provider == LLMProviderKind.GROQ:
             return self.groq_model
+        if self.llm_provider == LLMProviderKind.OPENROUTER:
+            return self.openrouter_model
         return self.openai_model
 
     def require_groq_api_key(self) -> str:
@@ -499,6 +529,12 @@ class Settings(BaseSettings):
             msg = "Missing OpenAI API key. Set OPENAI_API_KEY in .env."
             raise ConfigurationError(msg)
         return self.openai_api_key.strip()
+
+    def require_openrouter_api_key(self) -> str:
+        if not self.openrouter_api_key or not self.openrouter_api_key.strip():
+            msg = "Missing OpenRouter API key. Set OPENROUTER_API_KEY in .env."
+            raise ConfigurationError(msg)
+        return self.openrouter_api_key.strip()
 
     def resolved_rag_knowledge_path(self) -> Path:
         """Absolute path to the Knowledge/ folder under the project root."""
@@ -625,6 +661,7 @@ class Settings(BaseSettings):
         secret_fields = (
             "groq_api_key",
             "openai_api_key",
+            "openrouter_api_key",
             "api_keys",
             "jwt_secret",
             "db_password",

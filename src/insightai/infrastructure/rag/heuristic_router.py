@@ -68,6 +68,14 @@ _RAG_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
         r"\brequirement(s)?\b",
         r"\bcompliance\b",
         r"\bregulation\b",
+        r"\bclosed\b",
+        r"\bclosure\b",
+        r"\bholiday(s)?\b",
+        r"\bno school\b",
+        r"\bcalendar\b",
+        r"\bwhich days\b",
+        r"\bwhen is\b.+\b(closed|close)\b",
+        r"\bbreak\b",
     )
 )
 

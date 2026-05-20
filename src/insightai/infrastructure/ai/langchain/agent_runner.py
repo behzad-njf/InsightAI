@@ -132,5 +132,13 @@ class LangChainAgentRunner(ILangChainAgentRunner):
                 temperature=self._settings.llm_temperature,
                 timeout=float(self._settings.openai_timeout_seconds),
             )
+        if self._settings.llm_provider == LLMProviderKind.OPENROUTER:
+            return ChatOpenAI(
+                model=self._settings.openrouter_model,
+                api_key=self._settings.require_openrouter_api_key(),
+                base_url=self._settings.openrouter_base_url.rstrip("/"),
+                temperature=self._settings.llm_temperature,
+                timeout=float(self._settings.openrouter_timeout_seconds),
+            )
         msg = f"LangChain agent does not support LLM provider: {self._settings.llm_provider}"
         raise ConfigurationError(msg)

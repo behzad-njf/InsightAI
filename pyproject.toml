@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Production-grade natural language to SQL agent platform"
 readme = "README.md"
 requires-python = ">=3.12"
-license = { text = "MIT", file = "LICENSE" }
+license = "MIT"
 authors = [{ name = "Behzad Najafzadeh" }]
 keywords = ["fastapi", "sql", "llm", "llamaindex", "analytics"]
 classifiers = [
@@ -29,6 +29,7 @@ dependencies = [
     "psycopg2-binary>=2.9.10",
     "groq>=0.13.0",
     "openai>=1.55.0",
+    "openrouter>=0.9.0",
     "httpx>=0.28.0",
     "llama-index-core>=0.12.0",
     "llama-index-llms-openai>=0.3.0",

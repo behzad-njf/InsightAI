@@ -22,6 +22,7 @@ class LLMProviderKind(StrEnum):
 
     GROQ = "groq"
     OPENAI = "openai"
+    OPENROUTER = "openrouter"
 
 
 class AIFrameworkKind(StrEnum):

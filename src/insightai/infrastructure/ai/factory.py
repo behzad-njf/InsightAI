@@ -13,13 +13,14 @@ from insightai.domain.ports.sql_generator import ISQLGenerator
 from insightai.domain.ports.sql_safety import ISQLSafetyValidator
 from insightai.infrastructure.ai.answer_generator import LLMAnswerGenerator
 from insightai.infrastructure.ai.frameworks.langchain_adapter import LangChainFrameworkAdapter
-from insightai.infrastructure.ai.langchain.availability import langchain_available
 from insightai.infrastructure.ai.frameworks.llamaindex_adapter import (
     LlamaIndexFrameworkAdapter,
 )
+from insightai.infrastructure.ai.langchain.availability import langchain_available
 from insightai.infrastructure.ai.providers.groq_provider import GroqLLMProvider
 from insightai.infrastructure.ai.providers.observing_provider import ObservingLLMProvider
 from insightai.infrastructure.ai.providers.openai_provider import OpenAILLMProvider
+from insightai.infrastructure.ai.providers.openrouter_provider import OpenRouterLLMProvider
 from insightai.infrastructure.ai.sql_generator import LLMSQLGenerator
 from insightai.infrastructure.config.settings import Settings, get_settings
 from insightai.infrastructure.observability.bootstrap import build_audit_logger
@@ -44,6 +45,8 @@ def create_raw_llm_provider(settings: Settings | None = None) -> ILLMProvider:
         return GroqLLMProvider(settings)
     if settings.llm_provider == LLMProviderKind.OPENAI:
         return OpenAILLMProvider(settings)
+    if settings.llm_provider == LLMProviderKind.OPENROUTER:
+        return OpenRouterLLMProvider(settings)
     msg = f"Unsupported LLM provider: {settings.llm_provider}"
     raise LLMConfigurationError(msg)
 

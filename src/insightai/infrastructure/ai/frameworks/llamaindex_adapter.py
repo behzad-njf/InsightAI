@@ -70,6 +70,15 @@ class LlamaIndexFrameworkAdapter(IAIFramework):
                 temperature=self._settings.llm_temperature,
                 timeout=float(self._settings.openai_timeout_seconds),
             )
+        elif self._provider.provider_kind == LLMProviderKind.OPENROUTER:
+            base_url = self._settings.openrouter_base_url.rstrip("/")
+            llm = OpenAI(
+                model=self._settings.openrouter_model,
+                api_key=self._settings.require_openrouter_api_key(),
+                api_base=base_url,
+                temperature=self._settings.llm_temperature,
+                timeout=float(self._settings.openrouter_timeout_seconds),
+            )
         else:
             logger.warning(
                 "llamaindex_llm_not_configured",

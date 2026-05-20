@@ -34,7 +34,6 @@ Manual refresh:
 insightai-knowledge-sync
 # or: insightai-ingest -i Knowledge -o data/rag_index/chunks.jsonl && insightai-rag-load
 ```
-
 ## Example questions
 
 After startup sync, you can ask:
@@ -44,3 +43,4 @@ After startup sync, you can ask:
 - "How do I get help with enrollment reports?"
 
 Analytical questions (counts, trends) still use the **SQL** path unless you force `route: "both"`.
+

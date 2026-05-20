@@ -17,6 +17,7 @@ from insightai.infrastructure.prompts.loader import (
     load_sql_generation_prompts,
     render_sql_generation_messages,
 )
+from insightai.infrastructure.ai.token_limits import cap_completion_tokens
 from insightai.infrastructure.security.composite_sql_validator import create_sql_safety_validator
 
 if TYPE_CHECKING:
@@ -64,11 +65,14 @@ class LLMSQLGenerator(ISQLGenerator):
             settings=self._settings,
             bundle=self._prompts,
         )
+        model = request.model or self._settings.get_active_llm_model()
+        max_tokens = cap_completion_tokens(model, self._max_completion_tokens)
+
         llm_request = LLMRequest(
             messages=messages,
             model=request.model,
             temperature=request.temperature,
-            max_tokens=self._max_completion_tokens,
+            max_tokens=max_tokens,
             metadata={"task": "sql_generation"},
         )
 
@@ -76,6 +80,8 @@ class LLMSQLGenerator(ISQLGenerator):
             "sql_generation_start",
             dialect=request.database_kind.value,
             context_tables=len(request.schema_table_names),
+            model=model,
+            max_tokens=max_tokens,
         )
         llm_response = await self._framework.complete(llm_request)
         output = parse_sql_generation_llm_output(llm_response.content)

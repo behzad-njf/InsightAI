@@ -27,6 +27,7 @@ from insightai.infrastructure.ai.frameworks.langchain_adapter import LangChainFr
 from insightai.infrastructure.ai.providers.groq_provider import GroqLLMProvider
 from insightai.infrastructure.ai.providers.observing_provider import ObservingLLMProvider
 from insightai.infrastructure.ai.providers.openai_provider import OpenAILLMProvider
+from insightai.infrastructure.ai.providers.openrouter_provider import OpenRouterLLMProvider
 from insightai.infrastructure.ai.sql_generator import LLMSQLGenerator
 from insightai.infrastructure.config.settings import Settings
 
@@ -191,6 +192,47 @@ async def test_openai_provider_complete() -> None:
 
     assert response.content == "Hello from OpenAI"
     assert response.provider == LLMProviderKind.OPENAI
+
+
+@pytest.mark.asyncio
+async def test_openrouter_provider_complete() -> None:
+    settings = _settings(
+        openrouter_api_key="sk-or-test",
+        openrouter_model="openai/gpt-4o-mini",
+    )
+    mock_client = MagicMock()
+    mock_client.chat.send.return_value = _groq_completion("Hello from OpenRouter")
+
+    with patch(
+        "insightai.infrastructure.ai.providers.openrouter_provider.OpenRouter",
+        return_value=mock_client,
+    ):
+        provider = OpenRouterLLMProvider(settings)
+        response = await provider.complete(
+            LLMRequest(messages=[LLMMessage(role=LLMRole.USER, content="Hi")]),
+        )
+
+    assert response.content == "Hello from OpenRouter"
+    assert response.provider == LLMProviderKind.OPENROUTER
+    mock_client.chat.send.assert_called_once()
+    call_kwargs = mock_client.chat.send.call_args.kwargs
+    assert call_kwargs["model"] == "openai/gpt-4o-mini"
+    assert call_kwargs["stream"] is False
+    assert call_kwargs["x_open_router_title"] == "InsightAI"
+
+
+def test_factory_selects_openrouter() -> None:
+    settings = _settings(
+        llm_provider=LLMProviderKind.OPENROUTER,
+        openrouter_api_key="sk-or-test",
+    )
+    with patch(
+        "insightai.infrastructure.ai.providers.openrouter_provider.OpenRouter",
+        return_value=MagicMock(),
+    ):
+        provider = create_llm_provider(settings)
+    assert isinstance(provider, ObservingLLMProvider)
+    assert isinstance(provider._inner, OpenRouterLLMProvider)  # noqa: SLF001
 
 
 def test_factory_selects_groq() -> None:

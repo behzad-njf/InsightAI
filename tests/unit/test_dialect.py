@@ -32,8 +32,7 @@ def test_infer_kind_from_url(url: str, expected: DatabaseKind | None) -> None:
 def test_wrap_with_row_cap_mssql() -> None:
     sql = "SELECT id FROM accounts_user"
     wrapped = wrap_with_row_cap(sql, DatabaseKind.MSSQL, 10)
-    assert "SELECT TOP 10" in wrapped
-    assert "insightai_sub" in wrapped
+    assert wrapped == "SELECT TOP 10 id FROM accounts_user"
 
 
 def test_wrap_with_row_cap_postgres() -> None:
@@ -50,3 +49,23 @@ def test_wrap_with_row_cap_explain_unchanged() -> None:
 def test_wrap_with_row_cap_invalid_limit() -> None:
     with pytest.raises(ValueError):
         wrap_with_row_cap("SELECT 1", DatabaseKind.SQLITE, 0)
+
+
+def test_wrap_with_row_cap_mssql_with_cte() -> None:
+    sql = (
+        "WITH pine AS (SELECT id FROM school_classroom) "
+        "SELECT name FROM pine ORDER BY name"
+    )
+    wrapped = wrap_with_row_cap(sql, DatabaseKind.MSSQL, 1001)
+    assert wrapped.upper().startswith("WITH ")
+    assert "SELECT TOP 1001" in wrapped.upper()
+    assert "insightai_sub" not in wrapped
+
+
+def test_wrap_with_row_cap_mssql_union() -> None:
+    sql = (
+        "SELECT a FROM t1 UNION ALL "
+        "SELECT COUNT(*) FROM t1 GROUP BY a ORDER BY a"
+    )
+    wrapped = wrap_with_row_cap(sql, DatabaseKind.MSSQL, 50)
+    assert "TOP 50" in wrapped.upper()
