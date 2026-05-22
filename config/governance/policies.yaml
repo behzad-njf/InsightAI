@@ -1,0 +1,33 @@
+# Governance policies — per-deployment (Phase 12).
+# Copy/adapt for your vertical; education example uses placeholder dimension names only.
+#
+# Enable in .env (step 12.2+): INSIGHTAI_GOVERNANCE_ENABLED=true
+# INSIGHTAI_GOVERNANCE_PATH=config/governance
+
+enabled: false
+
+scope_dimensions:
+  campus:
+    description: "Example school-site scope (education customers only)"
+    sql_bindings:
+      - table: school_school
+        column: id
+        operator: in_principal_attribute
+        attribute: campus_ids
+
+roles:
+  analyst:
+    allowed_tables: ["*"]
+    apply_scope_dimensions: [campus]
+    column_masks:
+      - column: email
+        strategy: exclude
+      - column: phone
+        strategy: exclude
+    missing_attribute_action: deny
+  admin:
+    allowed_tables: ["*"]
+    apply_scope_dimensions: []
+    column_masks: []
+
+default_missing_attribute_action: deny

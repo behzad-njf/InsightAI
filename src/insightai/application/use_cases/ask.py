@@ -5,17 +5,20 @@ from __future__ import annotations
 import time
 from typing import TYPE_CHECKING
 
-from insightai.domain.exceptions import SQLGenerationError
+from insightai.application.pipeline.governed_sql import prepare_governed_sql
+from insightai.domain.exceptions import GovernanceDeniedError, SQLGenerationError
 from insightai.domain.models.answer import GenerateAnswerRequest
 from insightai.domain.models.ask import (
+    AskMode,
     AskRequest,
     AskResult,
     AskStreamEvent,
     AskStreamPhase,
     AskTimings,
 )
+from insightai.domain.models.database import QueryResult
 from insightai.domain.models.hybrid import QueryRouteKind
-from insightai.domain.models.query_execution import RunQueryRequest, RunQueryResult
+from insightai.domain.models.query_execution import RunQueryRequest, RunQueryResult, RunQuerySQLSource
 from insightai.domain.models.sql_generation import GenerateSQLRequest, GenerateSQLResult
 from insightai.infrastructure.config.settings import Settings, get_settings
 from insightai.infrastructure.logging.setup import get_logger
@@ -34,19 +37,23 @@ if TYPE_CHECKING:
     from insightai.application.use_cases.generate_sql import GenerateSQLUseCase
     from insightai.application.use_cases.run_query import RunQueryUseCase
     from insightai.domain.ports.audit_logger import IAuditLogger
+    from insightai.application.pipeline.governed_sql import GovernedSQLPreparation
+    from insightai.domain.ports.governance import IGovernanceEnforcer
+    from insightai.domain.ports.sql_safety import ISQLSafetyValidator
 
 logger = get_logger(__name__)
 
 
 class AskUseCase:
     """
-    Orchestrate Phases 2–6: schema context → SQL → validate → execute → answer.
+    Orchestrate Phases 2–6: schema context → SQL → validate → govern → validate → execute → answer.
 
     Implements ``IAskPipeline`` for product APIs (``POST /api/v1/chat``) and debug
     ``POST /api/v1/ask``.
 
-    - Phase 3: ``GenerateSQLUseCase`` (includes Phase 4 post-process + validate on SQL)
-    - Phase 5: ``RunQueryUseCase`` (composite validator + executor limits)
+    - Phase 3: ``GenerateSQLUseCase`` (LLM path includes Phase 4 post-process on generated SQL)
+    - Phase 12.4: ``prepare_governed_sql`` — validate → governance → validate (before execute)
+    - Phase 5: ``RunQueryUseCase`` (re-validates and executes read-only SQL)
     - Phase 6: ``GenerateAnswerUseCase`` (grounded natural-language summary)
     """
 
@@ -57,12 +64,18 @@ class AskUseCase:
         generate_answer: GenerateAnswerUseCase,
         settings: Settings | None = None,
         audit: IAuditLogger | None = None,
+        governance: IGovernanceEnforcer | None = None,
+        sql_validator: ISQLSafetyValidator | None = None,
     ) -> None:
+        from insightai.infrastructure.governance.noop_enforcer import NoOpGovernanceEnforcer
+
         self._generate_sql = generate_sql
         self._run_query = run_query
         self._generate_answer = generate_answer
         self._settings = settings or get_settings()
         self._audit = audit or NullAuditLogger()
+        self._governance = governance or NoOpGovernanceEnforcer()
+        self._sql_validator = sql_validator
 
     async def execute(self, request: AskRequest) -> AskResult:
         try:
@@ -75,6 +88,15 @@ class AskUseCase:
                 stream=False,
             )
             raise
+        except GovernanceDeniedError as exc:
+            self._log_failure(
+                request,
+                str(exc),
+                error_code="GOVERNANCE_DENIED",
+                stream=False,
+                governance_denied=True,
+            )
+            raise
         except Exception as exc:
             self._log_failure(
                 request,
@@ -85,7 +107,7 @@ class AskUseCase:
             raise
 
     async def execute_sql_pipeline(self, request: AskRequest, *, stream: bool) -> AskResult:
-        """Run schema → SQL → execute → answer without hybrid routing (Phase 6.4)."""
+        """Run schema → SQL → govern hook → execute → answer without hybrid routing."""
         total_started = time.perf_counter()
         logger.info(
             "ask_pipeline_start",
@@ -113,14 +135,23 @@ class AskUseCase:
                 f"Cannot execute query: {explanation}",
             )
 
+        dry_run = request.mode == AskMode.DRY_RUN
         exec_started = time.perf_counter()
-        with start_span("insightai.ask.query_execution"):
-            execution = await self._run_query.execute(
-                self._build_run_query_request(request, sql_result),
+        preparation = self._prepare_governed_sql(request, sql_result)
+        if dry_run:
+            execution = self._build_dry_run_execution(
+                request,
+                preparation.sql_result,
+                preparation.validated_sql,
             )
+        else:
+            with start_span("insightai.ask.query_execution"):
+                execution = await self._run_query.execute(
+                    self._build_run_query_request(request, preparation),
+                )
         query_execution_ms = (time.perf_counter() - exec_started) * 1000
         record_ask_pipeline_stage(
-            stage="query_execution",
+            stage="query_execution" if not dry_run else "sql_validation",
             duration_seconds=query_execution_ms / 1000,
         )
 
@@ -146,16 +177,21 @@ class AskUseCase:
         result = AskResult(
             question=request.question,
             route=QueryRouteKind.SQL,
-            sql=sql_result,
+            sql=preparation.sql_result,
             execution=execution,
             answer=answer,
             timings=timings,
+            dry_run=dry_run,
+            governance_context=request.governance_context,
+            governance_decision=preparation.governance_decision,
         )
 
         logger.info(
             "ask_pipeline_complete",
             row_count=execution.query_result.row_count,
             truncated=execution.query_result.truncated,
+            dry_run=dry_run,
+            governance_applied=preparation.governance_decision.applied,
             sql_generation_ms=timings.sql_generation_ms,
             query_execution_ms=timings.query_execution_ms,
             answer_generation_ms=timings.answer_generation_ms,
@@ -208,15 +244,35 @@ class AskUseCase:
                 yield AskStreamEvent.failure(message, error_code="sql_generation_error")
                 return
 
-            yield AskStreamEvent.status(AskStreamPhase.EXECUTING_QUERY)
+            dry_run = request.mode == AskMode.DRY_RUN
             exec_started = time.perf_counter()
-            with start_span("insightai.ask.query_execution", attributes={"insightai.stream": True}):
-                execution = await self._run_query.execute(
-                    self._build_run_query_request(request, sql_result),
+
+            yield AskStreamEvent.status(AskStreamPhase.APPLYING_GOVERNANCE)
+            with start_span(
+                "insightai.ask.governance",
+                attributes={"insightai.stream": True},
+            ):
+                preparation = self._prepare_governed_sql(request, sql_result)
+
+            yield AskStreamEvent.status(AskStreamPhase.VALIDATING_SQL)
+            if dry_run:
+                execution = self._build_dry_run_execution(
+                    request,
+                    preparation.sql_result,
+                    preparation.validated_sql,
                 )
+            else:
+                yield AskStreamEvent.status(AskStreamPhase.EXECUTING_QUERY)
+                with start_span(
+                    "insightai.ask.query_execution",
+                    attributes={"insightai.stream": True},
+                ):
+                    execution = await self._run_query.execute(
+                        self._build_run_query_request(request, preparation),
+                    )
             query_execution_ms = (time.perf_counter() - exec_started) * 1000
             record_ask_pipeline_stage(
-                stage="query_execution",
+                stage="query_execution" if not dry_run else "sql_validation",
                 duration_seconds=query_execution_ms / 1000,
             )
 
@@ -246,15 +302,20 @@ class AskUseCase:
                         )
                         ask_result = AskResult(
                             question=request.question,
-                            sql=sql_result,
+                            sql=preparation.sql_result,
                             execution=execution,
                             answer=chunk.result,
                             timings=timings,
+                            dry_run=dry_run,
+                            governance_context=request.governance_context,
+                            governance_decision=preparation.governance_decision,
                         )
                         logger.info(
                             "ask_pipeline_stream_complete",
                             row_count=execution.query_result.row_count,
                             truncated=execution.query_result.truncated,
+                            dry_run=dry_run,
+                            governance_applied=preparation.governance_decision.applied,
                             total_ms=timings.total_ms,
                         )
                         self._audit.log_ask_complete(
@@ -280,6 +341,15 @@ class AskUseCase:
                 stream=True,
             )
             yield AskStreamEvent.failure(str(exc), error_code="sql_generation_error")
+        except GovernanceDeniedError as exc:
+            self._log_failure(
+                request,
+                str(exc),
+                error_code="GOVERNANCE_DENIED",
+                stream=True,
+                governance_denied=True,
+            )
+            yield AskStreamEvent.failure(str(exc), error_code="GOVERNANCE_DENIED")
         except Exception as exc:
             logger.exception("ask_pipeline_stream_failed", error=str(exc))
             self._log_failure(
@@ -298,6 +368,7 @@ class AskUseCase:
         error_code: str | None,
         stream: bool,
         phase: str | None = None,
+        governance_denied: bool = False,
     ) -> None:
         self._audit.log_ask_failure(
             build_ask_audit_failure(
@@ -306,30 +377,62 @@ class AskUseCase:
                 error_code=error_code,
                 stream=stream,
                 phase=phase,
+                governance_denied=governance_denied,
             ),
         )
 
-    def _audit_cache_scope(self) -> str | None:
+    def _cache_scope(self, request: AskRequest) -> str | None:
+        ctx = request.governance_context
+        if ctx is not None and ctx.api_key_id:
+            return f"api_key:{ctx.api_key_id}"
         from insightai.infrastructure.observability.context import get_audit_context
 
         audit = get_audit_context()
         return audit.auth_subject if audit is not None else None
 
-    def _build_run_query_request(
+    def _enforce_readonly(self, request: AskRequest) -> bool:
+        if request.enforce_readonly is not None:
+            return request.enforce_readonly
+        return self._settings.sql_enforce_readonly
+
+    def _prepare_governed_sql(
         self,
         request: AskRequest,
         sql_result: GenerateSQLResult,
+    ) -> GovernedSQLPreparation:
+        with start_span("insightai.ask.governance"):
+            preparation = prepare_governed_sql(
+                sql_result,
+                governance=self._governance,
+                governance_context=request.governance_context,
+                sql_validator=self._sql_validator,
+                enforce_readonly=self._enforce_readonly(request),
+            )
+        if preparation.governance_decision.applied:
+            logger.info(
+                "governance_modified",
+                dimensions_applied=list(preparation.governance_decision.dimensions_applied),
+                column_masks_applied=list(
+                    preparation.governance_decision.column_masks_applied,
+                ),
+            )
+        return preparation
+
+    def _build_run_query_request(
+        self,
+        request: AskRequest,
+        preparation: GovernedSQLPreparation,
     ) -> RunQueryRequest:
-        return RunQueryRequest.from_generate_sql(
-            sql_result,
+        return RunQueryRequest.from_sql(
+            preparation.validated_sql,
             max_rows=request.max_rows,
             timeout_seconds=request.timeout_seconds,
             enforce_readonly=request.enforce_readonly,
-            cache_scope=self._audit_cache_scope(),
+            cache_scope=self._cache_scope(request),
         )
 
     def _build_sql_request(self, request: AskRequest) -> GenerateSQLRequest:
-        cache_scope = self._audit_cache_scope()
+        cache_scope = self._cache_scope(request)
         return GenerateSQLRequest(
             question=request.question,
             max_context_tables=request.max_context_tables,
@@ -338,6 +441,32 @@ class AskUseCase:
             model=request.sql_model,
             temperature=request.sql_temperature,
             cache_scope=cache_scope,
+            use_llm=request.use_llm,
+        )
+
+    def _build_dry_run_execution(
+        self,
+        request: AskRequest,
+        sql_result: GenerateSQLResult,
+        validated_sql: str,
+    ) -> RunQueryResult:
+        run_request = RunQueryRequest.from_sql(
+            validated_sql,
+            max_rows=request.max_rows,
+            timeout_seconds=request.timeout_seconds,
+            enforce_readonly=request.enforce_readonly,
+            cache_scope=self._cache_scope(request),
+        )
+        options = run_request.to_execution_options(
+            self._settings.get_query_execution_options(),
+        )
+        return RunQueryResult(
+            sql=validated_sql,
+            source=RunQuerySQLSource.GENERATED,
+            query_result=QueryResult(columns=[], rows=[], row_count=0, truncated=False),
+            question=request.question,
+            generation=sql_result.sql,
+            execution_options=options,
         )
 
     def _build_answer_request(

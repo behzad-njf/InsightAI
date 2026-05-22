@@ -37,8 +37,13 @@ Typical latency for a full question (SQL + DB + answer) is on the order of **2�
 | 8 | Observability — audit logs, LLM usage, OTEL tracing, Prometheus `/metrics` (optional) | Complete — see optional `insightai[otel,prometheus]` |
 | 9 | Performance — Redis caching | Complete — see [docs/PERFORMANCE.md](docs/PERFORMANCE.md) |
 | 10 | Hybrid RAG — vectors + SQL + cited answers | Complete — see [docs/RAG_INGEST.md](docs/RAG_INGEST.md) |
+| 11 | Trusted semantic layer — approved metrics & example SQL | Complete — [docs/PHASE_11_TRUSTED_SEMANTIC.md](docs/PHASE_11_TRUSTED_SEMANTIC.md) |
+| 16 | App database & API key auth (platform Postgres/SQLite) | Complete — [docs/PHASE_16_APP_DB_AUTH.md](docs/PHASE_16_APP_DB_AUTH.md) |
+| 12 | Governance & data policy (YAML scope, masks) | Complete — [docs/GOVERNANCE.md](docs/GOVERNANCE.md), [SECURITY.md](SECURITY.md) |
 
-Roadmap detail: [AGENT_PHASES.md](AGENT_PHASES.md). Maintainer guide: [AGENT.md](AGENT.md).
+Roadmap detail: [AGENT_PHASES.md](AGENT_PHASES.md). Maintainer guide: [AGENT.md](AGENT.md).  
+**Global platform (11+):** [FUTURE_PHASES.md](FUTURE_PHASES.md) — Phases 11–20 (trusted SQL, governance, API key auth, evals, catalog; one instance per customer).  
+**Global learning (future):** [BRAIN_PHASES.md](BRAIN_PHASES.md) — Knowledge now; lesson store + UI later.
 
 ### Hybrid RAG and business knowledge
 
@@ -48,7 +53,13 @@ When `INSIGHTAI_RAG_ENABLED=true`, the chat pipeline can:
 - Run **SQL** for counts, lists, and trends
 - Combine both (`route: "both"`) with document citations
 
-Put policies, help text, security notes, and IMS/iSight reference material in `Knowledge/` (`.md`, `.txt`, `.pdf`). The API **ingests on startup** (or via CLI) so questions like *"What is this system for?"* or *"When is campus closed?"* use your docs—not guessed SQL.
+Put policies, help text, security notes, and reference material in `Knowledge/` (`.md`, `.txt`, `.pdf`). The API **ingests on startup** (or via CLI) so questions like *"What is this system for?"* or *"When is campus closed?"* use your docs—not guessed SQL.
+
+**Trusted SQL (Phase 11):** Author approved metrics and golden queries in [`config/semantic/`](config/semantic/README.md). Education samples: [`config/semantic/examples/education/`](config/semantic/examples/education/README.md). Set `INSIGHTAI_SEMANTIC_ENABLED=true` for trusted matching. Chat/API: `use_llm: false` skips the LLM when YAML matches; `mode: dry_run` validates SQL without running it. Validate locally: `insightai-semantic-validate`, `insightai-semantic-test-match`. See [docs/PHASE_11_TRUSTED_SEMANTIC.md](docs/PHASE_11_TRUSTED_SEMANTIC.md).
+
+**Platform app database & API keys (Phase 16):** Separate **readonly analytics** DB and **app DB** (keys only — never your warehouse password). Workflow: `insightai-app-db upgrade` → `insightai-keys create` → call API with `iai_...` token. Settings: `INSIGHTAI_API_AUTH_MODE=api_key`, `INSIGHTAI_API_KEY_AUTH_SOURCE=database|both`. Admin: `insightai-keys create --roles admin` then `GET /api/v1/admin/keys`. Full runbook: [docs/PHASE_16_APP_DB_AUTH.md](docs/PHASE_16_APP_DB_AUTH.md).
+
+**Governance (Phase 12):** Row scope, table allow/deny, and column masks in [`config/governance/`](config/governance/README.md). Operator guide: [docs/GOVERNANCE.md](docs/GOVERNANCE.md). Production review: [SECURITY.md](SECURITY.md) § Governance. Enable with `INSIGHTAI_GOVERNANCE_ENABLED=true`; validate with `insightai-governance-validate`; issue scoped keys with `--attributes campus_ids=1,2`.
 
 ```bash
 # After editing Knowledge/:
@@ -130,7 +141,19 @@ See [Knowledge/README.md](Knowledge/README.md) and [docs/RAG_INGEST.md](docs/RAG
 - `INSIGHTAI_API_AUTH_MODE`: `none` | `api_key` | `jwt`
 - API keys via `X-API-Key` or `Authorization: Bearer <key>`
 - **Production** requires auth mode other than `none` (settings validator).
+- **Today:** comma-separated secrets in `INSIGHTAI_API_KEYS` (Phase 7).
+- **DB keys (16.4):** `insightai-keys create` then send `X-API-Key: iai_...` (or Bearer). `INSIGHTAI_API_KEY_AUTH_SOURCE=both` (default) also accepts `INSIGHTAI_API_KEYS`.
 - Protected routes: `/chat`, `/chat/stream`, `/ask`, `/sql`, `/schema`. Health and `/ai/complete` stay public.
+
+### Production checklist (per phase)
+
+| Phase | What to configure | Commands / docs |
+|-------|-------------------|-----------------|
+| **7** | `INSIGHTAI_API_AUTH_MODE=api_key`, `INSIGHTAI_API_KEYS`, rate limits | [SECURITY.md](SECURITY.md) |
+| **10** | RAG: `INSIGHTAI_RAG_ENABLED`, pgvector URL, `Knowledge/` | `insightai-knowledge-sync` — [docs/RAG_INGEST.md](docs/RAG_INGEST.md) |
+| **11** | Trusted YAML in `config/semantic/`, `INSIGHTAI_SEMANTIC_ENABLED=true` | `insightai-semantic-validate` — [docs/PHASE_11_TRUSTED_SEMANTIC.md](docs/PHASE_11_TRUSTED_SEMANTIC.md) |
+| **16** | App DB, DB-backed keys, optional admin key | `insightai-app-db upgrade`, `insightai-keys create`, `INSIGHTAI_API_KEY_AUTH_SOURCE=database` — [docs/PHASE_16_APP_DB_AUTH.md](docs/PHASE_16_APP_DB_AUTH.md) |
+| **12** | `INSIGHTAI_GOVERNANCE_ENABLED=true`, `policies.yaml` + key `--attributes` | [docs/GOVERNANCE.md](docs/GOVERNANCE.md), `insightai-governance-validate`, `insightai-keys create` |
 
 ### Response streaming (SSE)
 
@@ -138,7 +161,7 @@ See [Knowledge/README.md](Knowledge/README.md) and [docs/RAG_INGEST.md](docs/RAG
 
 | Event | When | Payload |
 |-------|------|---------|
-| `status` | SQL / query / answer phase starts | `{"phase": "generating_sql" \| "executing_query" \| "generating_answer"}` |
+| `status` | SQL / query / answer phase starts | `{"phase": "generating_sql" \| "applying_governance" \| "validating_sql" \| "executing_query" \| "generating_answer"}` |
 | `token` | Answer text delta | `{"text": "..."}` |
 | `done` | Pipeline finished | Full chat JSON (same fields as sync `POST /chat`) |
 | `error` | Failure | `{"error_message", "error_code", "request_id"}` |
@@ -246,7 +269,7 @@ python scripts/ask.py --stream "How many students per classroom?"
 python scripts/ask.py   # interactive — type questions until you press Enter on empty line
 ```
 
-**Browser UI:** `python apps/serve_demo.py` → open http://127.0.0.1:8765
+**Browser UI:** `python apps/serve_demo.py` → open http://127.0.0.1:8765 (ChatGPT-style chat with sessions; no auth required in dev)
 
 See [apps/README.md](apps/README.md) for options (`--include-sql`, API key, etc.).
 
@@ -311,8 +334,10 @@ Copy `.env.example` to `.env`. Important variables:
 | `DB_READONLY_USER` / `DB_READONLY_PASSWORD` | Preferred for MSSQL (auto URL-encoding) |
 | `INSIGHTAI_SQL_MAX_ROWS` | Max rows per query (default 1000) |
 | `INSIGHTAI_SQL_QUERY_TIMEOUT_SECONDS` | Query timeout (default 120) |
+| `INSIGHTAI_APP_DATABASE_URL` | Platform DB (default SQLite `data/insightai_app.db`) |
 | `INSIGHTAI_API_AUTH_MODE` | `none` \| `api_key` \| `jwt` |
-| `INSIGHTAI_API_KEYS` | Comma-separated API keys |
+| `INSIGHTAI_API_KEY_AUTH_SOURCE` | `env` \| `database` \| `both` (default `both`) |
+| `INSIGHTAI_API_KEYS` | Comma-separated env keys (when source is `env` or `both`) |
 | `INSIGHTAI_RATE_LIMIT_ENABLED` | Enable rate limiting |
 | `INSIGHTAI_CHAT_STREAMING_ENABLED` | Enable `POST /api/v1/chat/stream` (default true) |
 | `INSIGHTAI_CHAT_SESSION_STORE` | `memory` \| `redis` |
@@ -332,6 +357,11 @@ Full list: [.env.example](.env.example).
 | `insightai-ingest` | Build JSONL embedding index from documents |
 | `insightai-rag-load` | Load JSONL into pgvector |
 | `insightai-knowledge-sync` | Ingest `Knowledge/` into the vector store |
+| `insightai-app-db` | App DB migrations (`upgrade`, `current`, `revision`) |
+| `insightai-semantic-validate` | Validate trusted semantic YAML + SQL parse |
+| `insightai-semantic-test-match` | Test question match against semantic catalog |
+| `insightai-governance-validate` | Validate `config/governance/policies.yaml` |
+| `insightai-keys` | Create/list/revoke API keys (`create`, `list`, `revoke`) |
 
 ---
 
@@ -343,8 +373,8 @@ The examples below are adapted from real end-to-end runs against a **multi-schoo
 
 | Question | Typical outcome (summary) |
 |----------|---------------------------|
-| *How many classrooms do I have?* | Returns dozens of classrooms (e.g. ~40 rows). Answer lists sample names such as **Sunrise Room**, **Pine Studio**, **Maple Wing**, **Oak Building**, **Music Studio**. |
-| *How many children are in each classroom?* | One row per classroom with counts (e.g. 19 classrooms). Example: **Building A** ~48 students, **Sunrise Room** ~1, **River Campus** ~28, **Oak Building** ~31. |
+| *How many classrooms do I have?* | Returns dozens of classrooms (e.g. ~40 rows). Answer lists sample names such as **Sunrise Room**, **AAA Studio**, **MMM Wing**, **OOO Building**, **Music Studio**. |
+| *How many children are in each classroom?* | One row per classroom with counts (e.g. 19 classrooms). Example: **Building A** ~48 students, **Sunrise Room** ~1, **River Campus** ~28, **OOO Building** ~31. |
 
 ### Membership and names (precision matters)
 
@@ -422,14 +452,17 @@ pytest -m mssql
 
 ```text
 src/insightai/       Application code
-Knowledge/           Business docs for RAG (policies, iSight/UVIMS help)
+Knowledge/           Business docs for RAG
 schema/              Database metadata (markdown)
 prompts/             LLM prompts (SQL, answer, RAG, hybrid)
 tests/               Unit and integration tests
 docker/              Compose + Postgres init scripts
-docs/                RAG ingest, performance guides
+config/              Per-instance YAML (semantic, future governance)
+docs/                RAG ingest, performance, Phase 11 implementation log
 AGENT.md             Maintainer / agent guide
-AGENT_PHASES.md      Phase roadmap
+AGENT_PHASES.md      Phase roadmap (1–10)
+FUTURE_PHASES.md     Global platform roadmap (11–20+)
+BRAIN_PHASES.md      Global learning / lessons
 REAL_TEST.md         Raw curl transcripts (developer reference)
 ```
 

@@ -11,7 +11,18 @@ from insightai.domain.models.answer import GenerateAnswerResult  # noqa: TC001
 from insightai.domain.models.database import DatabaseKind  # noqa: TC001
 from insightai.domain.models.hybrid import QueryRouteKind, RAGRetrievalResult  # noqa: TC001
 from insightai.domain.models.query_execution import RunQueryResult  # noqa: TC001
+from insightai.domain.models.governance import (  # noqa: TC001
+    GovernanceContext,
+    GovernanceDecision,
+)
 from insightai.domain.models.sql_generation import GenerateSQLResult  # noqa: TC001
+
+
+class AskMode(StrEnum):
+    """Whether the SQL pipeline executes against the database (Phase 11)."""
+
+    EXECUTE = "execute"
+    DRY_RUN = "dry_run"
 
 
 class AskRequest(BaseModel):
@@ -45,6 +56,18 @@ class AskRequest(BaseModel):
         default=None,
         description="Force sql | rag | both; None or auto uses hybrid router when RAG enabled.",
     )
+    mode: AskMode = Field(
+        default=AskMode.EXECUTE,
+        description="execute runs readonly SQL; dry_run validates SQL only (no DB rows).",
+    )
+    use_llm: bool = Field(
+        default=True,
+        description="When false, use trusted semantic match for SQL without LLM when possible.",
+    )
+    governance_context: GovernanceContext | None = Field(
+        default=None,
+        description="Caller identity for governance (Phase 16.5); from API auth.",
+    )
 
     model_config = {"frozen": True}
 
@@ -72,6 +95,15 @@ class AskResult(BaseModel):
     sql: GenerateSQLResult | None = None
     execution: RunQueryResult | None = None
     rag_retrieval: RAGRetrievalResult | None = None
+    dry_run: bool = Field(
+        default=False,
+        description="True when SQL was validated but not executed against the database.",
+    )
+    governance_context: GovernanceContext | None = None
+    governance_decision: GovernanceDecision | None = Field(
+        default=None,
+        description="Outcome of Phase 12 governance hook (Phase 12.4).",
+    )
 
     model_config = {"frozen": True}
 
@@ -82,6 +114,8 @@ class AskStreamPhase(StrEnum):
     ROUTING = "routing"
     RETRIEVING_DOCUMENTS = "retrieving_documents"
     GENERATING_SQL = "generating_sql"
+    APPLYING_GOVERNANCE = "applying_governance"
+    VALIDATING_SQL = "validating_sql"
     EXECUTING_QUERY = "executing_query"
     GENERATING_ANSWER = "generating_answer"
 

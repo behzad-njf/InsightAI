@@ -4,8 +4,13 @@ File-based templates loaded by `insightai.infrastructure.prompts.loader` — not
 
 | File | Role |
 |------|------|
-| `system.md` | System instructions: SELECT-only, dialect rules, JSON output shape |
-| `user.md` | Per-request template with schema context and question |
+| `system.md` | **Generic** system instructions: SELECT-only, dialect rules, JSON output shape |
+| `user.md` | Per-request template with schema context, optional knowledge, and question |
+
+## Design
+
+- **No deployment-specific table or column names** in `system.md`. Those come from `schema/database_schema.md` (per install) and from **`Knowledge/`** (domain rules, synced via RAG).
+- When `INSIGHTAI_RAG_ENABLED=true` and `INSIGHTAI_SQL_KNOWLEDGE_CONTEXT_ENABLED=true`, SQL generation retrieves top-k Knowledge chunks and adds a **Domain guidance** section to the user prompt.
 
 ## Placeholders (`user.md` and `system.md`)
 
@@ -13,6 +18,7 @@ File-based templates loaded by `insightai.infrastructure.prompts.loader` — not
 |-------------|--------|
 | `{question}` | User natural language question |
 | `{schema_context}` | `SchemaContextResult.context_markdown` (Phase 2) |
+| `{domain_context_section}` | Retrieved Knowledge excerpts (empty when disabled) |
 | `{sql_dialect}` | Human-readable dialect label from `DatabaseKind` |
 | `{max_rows}` | `Settings.sql_max_rows` |
 

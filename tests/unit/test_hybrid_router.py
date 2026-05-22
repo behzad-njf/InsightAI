@@ -19,6 +19,18 @@ from insightai.infrastructure.rag.heuristic_router import HeuristicQueryRouter
             "According to the handbook, how many staff are required per classroom?",
             QueryRouteKind.BOTH,
         ),
+        (
+            "Which students received activity feedback this month?",
+            QueryRouteKind.SQL,
+        ),
+        (
+            "what is last submited activity for Jane Doe?",
+            QueryRouteKind.SQL,
+        ),
+        (
+            "Which students got incident report this month?",
+            QueryRouteKind.SQL,
+        ),
     ],
 )
 def test_heuristic_router_classifies_examples(question: str, expected: QueryRouteKind) -> None:

@@ -7,7 +7,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from insightai.api.schemas.llm import TokenUsageSchema
-from insightai.domain.models.ask import AskRequest as DomainAskRequest
+from insightai.domain.models.ask import AskMode, AskRequest as DomainAskRequest
 from insightai.domain.models.ask import AskResult
 from insightai.domain.models.database import DatabaseKind
 from insightai.domain.models.hybrid import QueryRouteKind
@@ -28,8 +28,17 @@ class AskRequest(BaseModel):
     timeout_seconds: int | None = Field(default=None, ge=1, le=600)
     enforce_readonly: bool | None = None
     route: QueryRouteKind | None = None
+    mode: AskMode = AskMode.EXECUTE
+    use_llm: bool = True
 
-    def to_domain(self) -> DomainAskRequest:
+    def to_domain(
+        self,
+        *,
+        governance_context: object | None = None,
+    ) -> DomainAskRequest:
+        from insightai.domain.models.governance import GovernanceContext
+
+        ctx = governance_context if isinstance(governance_context, GovernanceContext) else None
         return DomainAskRequest(
             question=self.question,
             max_context_tables=self.max_context_tables,
@@ -43,6 +52,9 @@ class AskRequest(BaseModel):
             timeout_seconds=self.timeout_seconds,
             enforce_readonly=self.enforce_readonly,
             route=self.route,
+            mode=self.mode,
+            use_llm=self.use_llm,
+            governance_context=ctx,
         )
 
 
@@ -94,6 +106,11 @@ class AskResponse(BaseModel):
         default_factory=list,
         description="1-based document source indices cited in the answer.",
     )
+    mode: str = AskMode.EXECUTE.value
+    dry_run: bool = False
+    generation_source: str = "llm"
+    trusted_asset_id: str | None = None
+    trusted_match_confidence: str | None = None
 
     @classmethod
     def from_domain(cls, result: AskResult) -> AskResponse:
@@ -150,4 +167,13 @@ class AskResponse(BaseModel):
                 len(result.rag_retrieval.sources) if result.rag_retrieval is not None else 0
             ),
             citations=list(result.answer.answer.citations),
+            mode=AskMode.DRY_RUN.value if result.dry_run else AskMode.EXECUTE.value,
+            dry_run=result.dry_run,
+            generation_source=result.sql.sql.generation_source.value,
+            trusted_asset_id=result.sql.sql.trusted_asset_id,
+            trusted_match_confidence=(
+                result.sql.sql.trusted_match_confidence.value
+                if result.sql.sql.trusted_match_confidence is not None
+                else None
+            ),
         )

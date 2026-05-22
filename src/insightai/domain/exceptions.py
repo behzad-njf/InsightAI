@@ -32,6 +32,10 @@ class SchemaNotFoundError(SchemaError):
     """Requested schema resource was not found."""
 
 
+class SemanticConfigError(ConfigurationError):
+    """Invalid or inconsistent trusted semantic YAML (Phase 11)."""
+
+
 class LLMError(InsightAIError):
     """Base class for LLM-related failures."""
 
@@ -190,6 +194,25 @@ class RateLimitExceededError(InsightAIError):
         super().__init__(message, code="RATE_LIMIT_EXCEEDED")
         self.retry_after_seconds = max(1, retry_after_seconds)
         self.limit = limit
+
+
+class ApiKeyError(InsightAIError):
+    """API key management failures (Phase 16)."""
+
+
+class ApiKeyNotFoundError(ApiKeyError):
+    """Requested API key id or prefix was not found."""
+
+
+class GovernancePolicyError(ConfigurationError):
+    """Invalid or missing governance policy YAML (Phase 12)."""
+
+
+class GovernanceDeniedError(InsightAIError):
+    """SQL or data access denied by governance policy (Phase 12)."""
+
+    def __init__(self, message: str = "Access denied by data policy.") -> None:
+        super().__init__(message, code="GOVERNANCE_DENIED")
 
 
 class InvalidCredentialsError(AuthenticationError):

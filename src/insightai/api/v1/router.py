@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends
 
 from insightai.api.auth.dependencies import require_api_auth
 from insightai.api.rate_limit import enforce_rate_limit
-from insightai.api.v1.routes import ai, ask, chat, health, schema, sql
+from insightai.api.v1.routes import admin, ai, ask, chat, health, schema, sql
 
 # Public: probes and LLM smoke test (Phase 1).
 public_v1_router = APIRouter(prefix="/api/v1")
@@ -26,6 +26,11 @@ protected_v1_router.include_router(schema.router)
 protected_v1_router.include_router(sql.router)
 protected_v1_router.include_router(ask.router)
 
+# Admin: requires admin role (Phase 16.5); not on the generic protected dependency stack.
+admin_v1_router = APIRouter(prefix="/api/v1")
+admin_v1_router.include_router(admin.router)
+
 api_v1_router = APIRouter()
 api_v1_router.include_router(public_v1_router)
 api_v1_router.include_router(protected_v1_router)
+api_v1_router.include_router(admin_v1_router)

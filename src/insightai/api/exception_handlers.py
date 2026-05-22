@@ -15,6 +15,7 @@ from insightai.domain.exceptions import (
     DatabaseQueryError,
     DatabaseQueryTimeoutError,
     InsightAIError,
+    GovernanceDeniedError,
     InvalidCredentialsError,
     LLMProviderError,
     LLMProviderUnavailableError,
@@ -114,6 +115,16 @@ def register_exception_handlers(app: FastAPI) -> None:
             status_code=401,
             content={"error": exc.code, "message": exc.message},
             headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    @app.exception_handler(GovernanceDeniedError)
+    async def governance_denied_handler(
+        _request: Request,
+        exc: GovernanceDeniedError,
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=403,
+            content={"error": exc.code, "message": exc.message},
         )
 
     @app.exception_handler(ChatSessionNotFoundError)

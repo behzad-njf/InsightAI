@@ -37,6 +37,35 @@ def test_system_prompt_enforces_select_only() -> None:
     assert "read-only" in system.lower()
     assert "TOP" in system or "top" in system.lower()
     assert "JSON" in system
+    assert "school_" not in system
+    assert "accounts_" not in system
+    assert "CampusMetrics" not in system
+
+
+def test_user_prompt_renders_domain_context_section() -> None:
+    bundle = load_sql_generation_prompts()
+    user = bundle.render_user(
+        question="Who is in room A?",
+        schema_context="### enrollment\n- child_id",
+        sql_dialect=dialect_label(DatabaseKind.MSSQL),
+        max_rows=100,
+        domain_context="Join child_id to the user hub table.",
+    )
+    assert "Domain guidance" in user
+    assert "Join child_id to the user hub" in user
+    assert "enrollment" in user
+
+
+def test_user_prompt_omits_domain_section_when_empty() -> None:
+    bundle = load_sql_generation_prompts()
+    user = bundle.render_user(
+        question="Count rows",
+        schema_context="### t1\n- id",
+        sql_dialect=dialect_label(DatabaseKind.MSSQL),
+        max_rows=100,
+        domain_context=None,
+    )
+    assert "Domain guidance" not in user
 
 
 def test_user_prompt_renders_placeholders() -> None:

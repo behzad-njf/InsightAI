@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 
 from insightai.domain.models.auth import ApiAuthMode
 from insightai.domain.models.database import DatabaseKind
-from tests.conftest import make_settings
+from tests.conftest import make_settings, mock_governance_components
 from tests.fixtures.sql_generation_samples import CLASSROOM_QUESTION
 
 
@@ -25,6 +25,8 @@ def chat_client_api_key_auth() -> Generator[TestClient, None, None]:
     )
     from insightai.main import create_app
 
+    from tests.conftest import mock_app_database_components
+
     with (
         patch("insightai.main.get_settings", return_value=settings),
         patch(
@@ -34,6 +36,14 @@ def chat_client_api_key_auth() -> Generator[TestClient, None, None]:
         patch(
             "insightai.main.build_database_components",
             return_value=MagicMock(),
+        ),
+        patch(
+            "insightai.main.build_app_database_components",
+            return_value=mock_app_database_components(),
+        ),
+        patch(
+            "insightai.main.build_governance_components",
+            return_value=mock_governance_components(),
         ),
     ):
         app = create_app()

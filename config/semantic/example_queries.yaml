@@ -1,0 +1,23 @@
+# Golden example queries for this InsightAI instance (Phase 11).
+# See config/semantic/README.md for the full schema.
+#
+# Copy examples from examples/<vertical>/ when you have a starter pack (step 11.8).
+
+example_queries: []
+
+# Example (disabled — uncomment and adapt to your schema):
+#
+# example_queries:
+#   - id: classroom_headcount_by_name
+#     question: How many kids are in the Example classroom?
+#     description: Enrollment via school_classroomchild; filter by classroom_name.
+#     sql: |
+#       SELECT COUNT(DISTINCT cc.child_id) AS kid_count
+#       FROM dbo.school_classroomchild AS cc
+#       INNER JOIN dbo.school_classroom AS c ON c.id = cc.classroom_id
+#       WHERE c.classroom_name = N'Example'
+#     question_aliases:
+#       - headcount in Example classroom
+#     tags: [classroom, enrollment]
+#     enabled: true
+#     dialect: mssql

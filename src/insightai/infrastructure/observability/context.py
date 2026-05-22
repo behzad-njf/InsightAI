@@ -16,6 +16,7 @@ def bind_audit_context(
     *,
     session_id: str | None = None,
     auth_subject: str | None = None,
+    api_key_id: str | None = None,
 ) -> Token[AuditContext | None]:
     """
     Merge audit metadata for the current request.
@@ -27,6 +28,7 @@ def bind_audit_context(
     merged = AuditContext(
         session_id=session_id or (current.session_id if current else None),
         auth_subject=auth_subject or (current.auth_subject if current else None),
+        api_key_id=api_key_id or (current.api_key_id if current else None),
     )
     return audit_context_var.set(merged)
 

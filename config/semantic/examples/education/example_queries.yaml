@@ -1,0 +1,132 @@
+# Education vertical — example golden queries (copy into ../example_queries.yaml).
+
+example_queries:
+  - id: classroom_headcount_example
+    question: How many kids are in the Example classroom?
+    description: Classroom filter uses school_classroom.classroom_name, not school_school.title.
+    sql: |
+      SELECT COUNT(DISTINCT cc.child_id) AS kid_count
+      FROM dbo.school_classroomchild AS cc
+      INNER JOIN dbo.school_classroom AS c ON c.id = cc.classroom_id
+      INNER JOIN dbo.accounts_user AS u ON u.id = cc.child_id
+      WHERE c.classroom_name = N'Example'
+        AND u.is_active = 1
+    question_aliases:
+      - how many children in Example classroom
+      - headcount in Example classroom
+      - kids in Example class
+    tags: [classroom, headcount, education]
+    enabled: true
+    dialect: mssql
+
+  - id: campus_student_count_example
+    question: How many kids are in Campus A?
+    description: Campus via school_school.title LIKE; not classroom_name.
+    sql: |
+      SELECT COUNT(DISTINCT u.id) AS kid_count
+      FROM dbo.school_school AS s
+      INNER JOIN dbo.school_childschool AS cs ON cs.school_id = s.id
+      INNER JOIN dbo.accounts_user AS u ON u.id = cs.child_id
+      WHERE s.title LIKE N'%Campus A%'
+        AND u.is_active = 1
+    question_aliases:
+      - how many students at campus a
+      - student count campus a
+    tags: [campus, headcount, education]
+    enabled: true
+    dialect: mssql
+
+  - id: last_incident_report_submitted
+    question: Show detail for the last submitted incident report
+    description: UNION school_behavioral and incident-type school_studentactivityfeedback.
+    sql: |
+      SELECT TOP 1 combined.*
+      FROM (
+          SELECT
+              N'behavioral' AS source,
+              b.id AS report_id,
+              b.incident_date AS report_at,
+              b.type,
+              b.incident_description,
+              b.action_taken,
+              b.image1, b.image2, b.image3, b.image4, b.image5,
+              CAST(NULL AS nvarchar(100)) AS attachment_file,
+              u.first_name,
+              u.last_name
+          FROM dbo.school_behavioral AS b
+          INNER JOIN dbo.accounts_user AS u ON u.id = b.child_id
+
+          UNION ALL
+
+          SELECT
+              N'activity_feedback',
+              saf.id,
+              saf.created_at,
+              saf.feedback_type,
+              saf.description,
+              saf.details,
+              NULL, NULL, NULL, NULL, NULL,
+              ff.[file] AS attachment_file,
+              u.first_name,
+              u.last_name
+          FROM dbo.school_studentactivityfeedback AS saf
+          INNER JOIN dbo.accounts_user AS u ON u.id = saf.student_id
+          LEFT JOIN dbo.school_feedbackfile AS ff ON ff.feedback_id = saf.id
+          WHERE saf.feedback_type LIKE N'%incident%'
+             OR saf.title LIKE N'%incident%'
+      ) AS combined
+      ORDER BY report_at DESC
+    question_aliases:
+      - last incident report
+      - most recent incident report
+    tags: [incident, education]
+    enabled: true
+    dialect: mssql
+
+  - id: last_incident_with_image
+    question: Show detail for the last submitted incident report with image
+    description: Filter rows with behavioral image columns or feedbackfile attachment before ORDER BY.
+    sql: |
+      SELECT TOP 1 combined.*
+      FROM (
+          SELECT
+              N'behavioral' AS source,
+              b.id AS report_id,
+              b.incident_date AS report_at,
+              b.type,
+              b.incident_description,
+              b.action_taken,
+              b.image1, b.image2, b.image3, b.image4, b.image5,
+              CAST(NULL AS nvarchar(100)) AS attachment_file,
+              u.first_name,
+              u.last_name
+          FROM dbo.school_behavioral AS b
+          INNER JOIN dbo.accounts_user AS u ON u.id = b.child_id
+          WHERE (b.image1 IS NOT NULL OR b.image2 IS NOT NULL OR b.image3 IS NOT NULL
+                 OR b.image4 IS NOT NULL OR b.image5 IS NOT NULL)
+
+          UNION ALL
+
+          SELECT
+              N'activity_feedback',
+              saf.id,
+              saf.created_at,
+              saf.feedback_type,
+              saf.description,
+              saf.details,
+              NULL, NULL, NULL, NULL, NULL,
+              ff.[file] AS attachment_file,
+              u.first_name,
+              u.last_name
+          FROM dbo.school_studentactivityfeedback AS saf
+          INNER JOIN dbo.accounts_user AS u ON u.id = saf.student_id
+          LEFT JOIN dbo.school_feedbackfile AS ff ON ff.feedback_id = saf.id
+          WHERE ff.[file] IS NOT NULL
+      ) AS combined
+      ORDER BY report_at DESC
+    question_aliases:
+      - last incident with image
+      - incident report with photo
+    tags: [incident, images, education]
+    enabled: true
+    dialect: mssql

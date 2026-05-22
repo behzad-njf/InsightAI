@@ -16,6 +16,7 @@ from insightai.api.routes.metrics import router as metrics_router
 from insightai.api.tracing_middleware import TracingMiddleware
 from insightai.api.v1.router import api_v1_router
 from insightai.domain.exceptions import ConfigurationError
+from insightai.infrastructure.app_db.bootstrap import build_app_database_components
 from insightai.infrastructure.ai.factory import build_ai_components
 from insightai.infrastructure.cache.bootstrap import build_cache
 from insightai.infrastructure.chat.bootstrap import build_chat_session_store
@@ -31,6 +32,8 @@ from insightai.infrastructure.rag.bootstrap import build_rag_components
 from insightai.infrastructure.rag.knowledge_sync import sync_knowledge_on_startup
 from insightai.infrastructure.ratelimit.bootstrap import build_rate_limiter
 from insightai.infrastructure.schema.bootstrap import build_schema_components
+from insightai.infrastructure.governance.bootstrap import build_governance_components
+from insightai.infrastructure.semantic.bootstrap import build_semantic_components
 
 logger = get_logger(__name__)
 
@@ -49,6 +52,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     app.state.settings = settings
     app.state.schema = build_schema_components(settings)
+    app.state.semantic = build_semantic_components(settings)
+    app.state.app_database = build_app_database_components(settings)
+    logger.info("app_database_configured", url=app.state.app_database.url)
+    app.state.governance = build_governance_components(settings)
 
     try:
         app.state.database = build_database_components(settings)
@@ -105,6 +112,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     if app.state.database is not None:
         app.state.database.engine.dispose()
         logger.info("database_engine_disposed")
+
+    app_db = getattr(app.state, "app_database", None)
+    if app_db is not None:
+        app_db.engine.dispose()
+        logger.info("app_database_engine_disposed")
 
     logger.info("application_shutdown")
 

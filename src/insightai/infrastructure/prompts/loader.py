@@ -9,6 +9,7 @@ from insightai.domain.exceptions import PromptNotFoundError
 from insightai.domain.models.database import DatabaseKind, QueryResult
 from insightai.domain.models.llm import LLMMessage, LLMRole
 from insightai.infrastructure.config.settings import Settings, get_settings
+from insightai.infrastructure.prompts.domain_context import format_domain_context_section
 from insightai.infrastructure.prompts.result_format import (
     column_names_list,
     format_query_result_for_prompt,
@@ -70,10 +71,12 @@ class SQLGenerationPromptBundle:
         schema_context: str,
         sql_dialect: str,
         max_rows: int,
+        domain_context: str | None = None,
     ) -> str:
         return self.user_template.format(
             question=question.strip(),
             schema_context=schema_context.strip(),
+            domain_context_section=format_domain_context_section(domain_context),
             sql_dialect=sql_dialect,
             max_rows=max_rows,
         )
@@ -238,6 +241,7 @@ def render_sql_generation_messages(
     schema_context: str,
     database_kind: DatabaseKind,
     max_rows: int | None = None,
+    domain_context: str | None = None,
     settings: Settings | None = None,
     bundle: SQLGenerationPromptBundle | None = None,
 ) -> list[LLMMessage]:
@@ -262,6 +266,7 @@ def render_sql_generation_messages(
                 schema_context=schema_context,
                 sql_dialect=dialect,
                 max_rows=row_limit,
+                domain_context=domain_context,
             ),
         ),
     ]

@@ -75,11 +75,17 @@ def build_ask_audit_complete(
         else None
     )
 
+    gov = result.governance_context
+    gov_decision = result.governance_decision
     return AskAuditComplete(
         request_id=request_id,
         question_length=len(question),
         session_id=ctx.session_id if ctx else None,
         auth_subject=ctx.auth_subject if ctx else None,
+        auth_api_key_id=(
+            gov.api_key_id if gov is not None else (ctx.api_key_id if ctx else None)
+        ),
+        auth_roles=list(gov.roles) if gov is not None else [],
         stream=stream,
         schema_table_count=schema_table_count,
         tables_used=tables_used,
@@ -99,6 +105,12 @@ def build_ask_audit_complete(
         rag_source_count=(
             len(result.rag_retrieval.sources) if result.rag_retrieval is not None else 0
         ),
+        governance_applied=(
+            gov_decision.applied if gov_decision is not None else False
+        ),
+        governance_dimensions_applied=(
+            list(gov_decision.dimensions_applied) if gov_decision is not None else []
+        ),
     )
 
 
@@ -109,6 +121,7 @@ def build_ask_audit_failure(
     stream: bool = False,
     error_code: str | None = None,
     phase: str | None = None,
+    governance_denied: bool = False,
 ) -> AskAuditFailure:
     ctx = get_audit_context()
     request_id = request_id_var.get() or "unknown"
@@ -121,4 +134,5 @@ def build_ask_audit_failure(
         auth_subject=ctx.auth_subject if ctx else None,
         stream=stream,
         phase=phase,
+        governance_denied=governance_denied,
     )

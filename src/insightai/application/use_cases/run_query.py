@@ -54,6 +54,18 @@ class RunQueryUseCase:
         )
         self._cache = cache
 
+    async def validate_sql(self, request: RunQueryRequest) -> str:
+        """
+        Validate and normalize SQL without opening a database connection (Phase 11 dry_run).
+
+        Raises:
+            ReadOnlySQLViolationError: When the composite validator rejects the SQL.
+            DatabaseQueryError: When SQL text cannot be resolved from the request.
+        """
+        sql = request.resolve_sql()
+        options = request.to_execution_options(self._execution_defaults)
+        return self._validate_before_execute(sql, enforce=options.enforce_readonly)
+
     async def execute(self, request: RunQueryRequest) -> RunQueryResult:
         try:
             sql = request.resolve_sql()

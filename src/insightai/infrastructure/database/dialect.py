@@ -19,6 +19,28 @@ def ping_sql(kind: DatabaseKind) -> str:  # noqa: ARG001
     return "SELECT 1"
 
 
+def _parsed_row_limit(stripped: str, kind: DatabaseKind) -> int | None:
+    """Return TOP/LIMIT already present in the query, if any."""
+    read_dialect = _SQLGLOT_READ.get(kind)
+    if read_dialect is None:
+        return None
+    try:
+        expression = sqlglot.parse_one(stripped, read=read_dialect)
+    except sqlglot.errors.ParseError:
+        return None
+    if not isinstance(expression, exp.Query):
+        return None
+    limit_node = expression.args.get("limit")
+    if limit_node is None:
+        return None
+    if isinstance(limit_node, exp.Limit) and isinstance(
+        limit_node.expression, exp.Literal
+    ):
+        if limit_node.expression.is_int:
+            return int(limit_node.expression.name)
+    return None
+
+
 def _cap_with_sqlglot(stripped: str, kind: DatabaseKind, limit: int) -> str | None:
     """Apply TOP/LIMIT via sqlglot when the statement parses (supports WITH/CTE)."""
     read_dialect = _SQLGLOT_READ.get(kind)
@@ -30,7 +52,9 @@ def _cap_with_sqlglot(stripped: str, kind: DatabaseKind, limit: int) -> str | No
         return None
     if not isinstance(expression, exp.Query):
         return None
-    return expression.limit(limit).sql(dialect=read_dialect)
+    existing = _parsed_row_limit(stripped, kind)
+    effective = min(limit, existing) if existing is not None else limit
+    return expression.limit(effective).sql(dialect=read_dialect)
 
 
 def wrap_with_row_cap(sql: str, kind: DatabaseKind, limit: int) -> str:

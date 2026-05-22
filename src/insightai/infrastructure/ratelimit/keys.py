@@ -20,6 +20,8 @@ def resolve_rate_limit_key(request: Request, settings: Settings) -> str:
     """
     principal: AuthenticatedPrincipal | None = getattr(request.state, "principal", None)
     if principal is not None and principal.auth_method != ApiAuthMode.NONE:
+        if principal.api_key_id:
+            return f"api_key:{principal.api_key_id}"
         return f"principal:{principal.subject}"
 
     return f"ip:{_client_ip(request, settings)}"

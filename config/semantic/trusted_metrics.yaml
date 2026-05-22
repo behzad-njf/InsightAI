@@ -1,0 +1,24 @@
+# Trusted metrics for this InsightAI instance (Phase 11).
+# See config/semantic/README.md for the full schema.
+#
+# Copy metrics from examples/<vertical>/ when you have a starter pack (step 11.8).
+# Leave `metrics: []` until you add approved KPIs.
+
+metrics: []
+
+# Example (disabled — uncomment and adapt to your schema):
+#
+# metrics:
+#   - id: active_user_count
+#     title: Active users
+#     description: Count of users where is_active = 1.
+#     sql: |
+#       SELECT COUNT(*) AS active_user_count
+#       FROM dbo.accounts_user AS u
+#       WHERE u.is_active = 1
+#     question_hints:
+#       - how many active users
+#       - count active users
+#     tags: [users]
+#     enabled: true
+#     dialect: mssql

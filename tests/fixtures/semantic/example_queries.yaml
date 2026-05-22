@@ -1,0 +1,13 @@
+example_queries:
+  - id: fixture_classroom_headcount
+    question: How many kids are in the Example classroom?
+    description: Fixture example for YAML loader.
+    sql: |
+      SELECT COUNT(DISTINCT cc.child_id) AS kid_count
+      FROM dbo.school_classroomchild AS cc
+      INNER JOIN dbo.school_classroom AS c ON c.id = cc.classroom_id
+      WHERE c.classroom_name = N'Example'
+    question_aliases:
+      - headcount Example classroom
+    tags: [fixture, classroom]
+    enabled: true

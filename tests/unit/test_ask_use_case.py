@@ -133,18 +133,22 @@ async def test_ask_execute_stream_emits_status_tokens_and_done(
         "status",
         "status",
         "status",
+        "status",
+        "status",
         "token",
         "token",
         "done",
     ]
     assert events[0].phase == AskStreamPhase.GENERATING_SQL
-    assert events[1].phase == AskStreamPhase.EXECUTING_QUERY
-    assert events[2].phase == AskStreamPhase.GENERATING_ANSWER
-    assert events[3].text == "One "
-    assert events[4].text == "row."
-    assert events[5].result is not None
-    assert events[5].result.answer.answer.answer == "One row returned."
-    assert events[5].result.timings.total_ms >= 0
+    assert events[1].phase == AskStreamPhase.APPLYING_GOVERNANCE
+    assert events[2].phase == AskStreamPhase.VALIDATING_SQL
+    assert events[3].phase == AskStreamPhase.EXECUTING_QUERY
+    assert events[4].phase == AskStreamPhase.GENERATING_ANSWER
+    assert events[5].text == "One "
+    assert events[6].text == "row."
+    assert events[7].result is not None
+    assert events[7].result.answer.answer.answer == "One row returned."
+    assert events[7].result.timings.total_ms >= 0
 
 
 @pytest.mark.asyncio

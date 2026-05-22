@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 from insightai.api.schemas.llm import TokenUsageSchema
 from insightai.domain.models.database import DatabaseKind
+from insightai.domain.models.semantic import GenerationSource
 from insightai.domain.models.sql_generation import GenerateSQLRequest, GenerateSQLResult
 
 
@@ -18,6 +19,10 @@ class SQLGenerateRequest(BaseModel):
     database_kind: DatabaseKind | None = None
     model: str | None = None
     temperature: float = Field(default=0.1, ge=0.0, le=2.0)
+    use_llm: bool = Field(
+        default=True,
+        description="When false, use trusted semantic match without calling the LLM.",
+    )
 
     def to_domain(self) -> GenerateSQLRequest:
         return GenerateSQLRequest(
@@ -27,6 +32,7 @@ class SQLGenerateRequest(BaseModel):
             database_kind=self.database_kind,
             model=self.model,
             temperature=self.temperature,
+            use_llm=self.use_llm,
         )
 
 
@@ -46,6 +52,12 @@ class SQLGenerateResponse(BaseModel):
     model: str | None = None
     provider: str | None = None
     finish_reason: str | None = None
+    generation_source: str = Field(
+        default=GenerationSource.LLM.value,
+        description="llm | trusted_metric | trusted_example | rule_template",
+    )
+    trusted_asset_id: str | None = None
+    trusted_match_confidence: str | None = None
 
     @classmethod
     def from_domain(cls, result: GenerateSQLResult) -> SQLGenerateResponse:
@@ -67,4 +79,11 @@ class SQLGenerateResponse(BaseModel):
             model=result.sql.model,
             provider=result.sql.provider.value if result.sql.provider else None,
             finish_reason=result.sql.finish_reason,
+            generation_source=result.sql.generation_source.value,
+            trusted_asset_id=result.sql.trusted_asset_id,
+            trusted_match_confidence=(
+                result.sql.trusted_match_confidence.value
+                if result.sql.trusted_match_confidence is not None
+                else None
+            ),
         )

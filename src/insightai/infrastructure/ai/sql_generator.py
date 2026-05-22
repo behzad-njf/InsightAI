@@ -62,6 +62,7 @@ class LLMSQLGenerator(ISQLGenerator):
             schema_context=request.schema_context,
             database_kind=request.database_kind,
             max_rows=request.max_rows,
+            domain_context=request.domain_context,
             settings=self._settings,
             bundle=self._prompts,
         )

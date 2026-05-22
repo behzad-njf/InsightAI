@@ -1,0 +1,13 @@
+metrics:
+  - id: fixture_active_user_count
+    title: Fixture active users
+    description: Test metric for YAML loader.
+    sql: |
+      SELECT COUNT(*) AS active_user_count
+      FROM dbo.accounts_user AS u
+      WHERE u.is_active = 1
+    question_hints:
+      - how many active users
+    tags: [fixture, users]
+    enabled: true
+    dialect: mssql

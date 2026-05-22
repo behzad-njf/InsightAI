@@ -10,6 +10,11 @@ from pydantic import BaseModel, Field, field_validator
 from insightai.domain.models.database import DatabaseKind
 from insightai.domain.models.llm import LLMProviderKind, TokenUsage
 from insightai.domain.models.schema import SchemaContextResult
+from insightai.domain.models.semantic import (
+    GenerationSource,
+    TrustedMatchConfidence,
+    TrustedSQLMatchResult,
+)
 
 
 class SQLGenerationConfidence(StrEnum):
@@ -51,6 +56,10 @@ class SQLGenerationRequest(BaseModel):
         description="Optional LLM model override.",
     )
     temperature: float = Field(default=0.1, ge=0.0, le=2.0)
+    domain_context: str | None = Field(
+        default=None,
+        description="Optional excerpts from Knowledge/ (RAG) for domain-specific SQL rules.",
+    )
 
     model_config = {"frozen": True}
 
@@ -64,6 +73,7 @@ class SQLGenerationRequest(BaseModel):
         max_rows: int | None = None,
         model: str | None = None,
         temperature: float = 0.1,
+        domain_context: str | None = None,
     ) -> Self:
         """Build a request from Phase 2 schema context output."""
         return cls(
@@ -74,6 +84,7 @@ class SQLGenerationRequest(BaseModel):
             max_rows=max_rows,
             model=model,
             temperature=temperature,
+            domain_context=domain_context,
         )
 
 
@@ -120,6 +131,18 @@ class SQLGenerationResult(BaseModel):
     model: str | None = None
     provider: LLMProviderKind | None = None
     finish_reason: str | None = None
+    generation_source: GenerationSource = Field(
+        default=GenerationSource.LLM,
+        description="How SQL was produced (Phase 11 trusted semantic layer).",
+    )
+    trusted_asset_id: str | None = Field(
+        default=None,
+        description="Matched metric or example_queries id when trusted.",
+    )
+    trusted_match_confidence: TrustedMatchConfidence | None = Field(
+        default=None,
+        description="Rule-based match tier when generation_source is trusted.",
+    )
 
     model_config = {"frozen": True}
 
@@ -152,6 +175,47 @@ class SQLGenerationResult(BaseModel):
             finish_reason=finish_reason,
         )
 
+    @classmethod
+    def from_trusted_match(
+        cls,
+        match: TrustedSQLMatchResult,
+        *,
+        schema_table_names: list[str] | None = None,
+    ) -> Self:
+        """Build SQL generation output from an approved semantic asset (no LLM)."""
+        return cls(
+            sql=match.sql,
+            explanation=match.explanation,
+            confidence=_sql_confidence_for_trusted_match(match.confidence),
+            schema_table_names=list(schema_table_names or []),
+            generation_source=match.generation_source,
+            trusted_asset_id=match.trusted_asset_id,
+            trusted_match_confidence=match.confidence,
+        )
+
+    def with_trusted_sql_verification(self, match: TrustedSQLMatchResult) -> Self:
+        """Annotate LLM output when generated SQL matches an approved asset."""
+        if not match.matched or match.confidence not in (
+            TrustedMatchConfidence.EXACT_SQL,
+            TrustedMatchConfidence.NORMALIZED_SQL,
+        ):
+            return self
+        return self.model_copy(
+            update={
+                "generation_source": match.generation_source,
+                "trusted_asset_id": match.trusted_asset_id,
+                "trusted_match_confidence": match.confidence,
+            },
+        )
+
+
+def _sql_confidence_for_trusted_match(
+    confidence: TrustedMatchConfidence,
+) -> SQLGenerationConfidence:
+    if confidence == TrustedMatchConfidence.QUESTION_MATCH:
+        return SQLGenerationConfidence.MEDIUM
+    return SQLGenerationConfidence.HIGH
+
 
 class GenerateSQLRequest(BaseModel):
     """End-to-end NL → SQL request (schema context + generation)."""
@@ -178,6 +242,12 @@ class GenerateSQLRequest(BaseModel):
     cache_scope: str | None = Field(
         default=None,
         description="Optional cache namespace (e.g. auth subject) for user-scoped schema caching.",
+    )
+    use_llm: bool = Field(
+        default=True,
+        description=(
+            "When false and semantic matching finds an asset, skip LLM SQL generation."
+        ),
     )
 
     model_config = {"frozen": True}

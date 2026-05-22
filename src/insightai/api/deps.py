@@ -82,10 +82,33 @@ def get_schema_context_use_case(request: Request) -> BuildSchemaContextUseCase:
 
 def get_generate_sql_use_case(request: Request) -> GenerateSQLUseCase:
     ai: AIComponents = request.app.state.ai
+    retrieve_rag = None
+    settings = ai.settings
+    rag = getattr(request.app.state, "rag", None)
+    if (
+        rag is not None
+        and rag.enabled
+        and rag.embedding_provider is not None
+        and rag.vector_store is not None
+        and settings.sql_knowledge_context_enabled
+    ):
+        retrieve_rag = RetrieveRAGContextUseCase(
+            rag.embedding_provider,
+            rag.vector_store,
+            settings,
+        )
+    semantic = getattr(request.app.state, "semantic", None)
+    match_trusted = (
+        semantic.match_use_case
+        if semantic is not None and semantic.enabled
+        else None
+    )
     return GenerateSQLUseCase(
         get_schema_context_use_case(request),
         ai.sql_generator,
         ai.settings,
+        retrieve_rag=retrieve_rag,
+        match_trusted=match_trusted,
     )
 
 
@@ -94,12 +117,17 @@ def get_ask_use_case(
 ) -> AskUseCase | HybridAskUseCase | LangChainAgentAskUseCase:
     """Full NL pipeline; hybrid RAG or LangChain agent when configured."""
     settings = get_settings(request)
+    governance = getattr(request.app.state, "governance", None)
+    enforcer = governance.enforcer if governance is not None else None
+    db: DatabaseComponents | None = request.app.state.database
     sql_ask = AskUseCase(
         get_generate_sql_use_case(request),
         get_run_query_use_case(request),
         get_generate_answer_use_case(request),
         settings,
         request.app.state.audit,
+        governance=enforcer,
+        sql_validator=db.validator if db is not None else None,
     )
     rag = getattr(request.app.state, "rag", None)
     if rag is None or not rag.enabled:

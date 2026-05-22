@@ -6,13 +6,17 @@
 
 database_schema.md
 
+tests/fixtures/rag/
 
 AGENT.md
 AGENT_PHASES.md
+BRAIN_PHASES.md
 
 Knowledge/*
 !Knowledge/README.md
 
+src/insightai/infrastructure/schema/context_builder.py
+tests/unit/test_schema_context.py
 
 # Credentials (never commit)
 *.pem

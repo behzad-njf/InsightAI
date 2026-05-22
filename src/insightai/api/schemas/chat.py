@@ -6,7 +6,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from insightai.domain.models.ask import AskRequest as DomainAskRequest
+from insightai.domain.models.ask import AskMode, AskRequest as DomainAskRequest
 from insightai.domain.models.ask import AskResult, AskStreamEvent
 from insightai.domain.models.hybrid import QueryRouteKind
 from insightai.infrastructure.logging.setup import request_id_var
@@ -38,12 +38,30 @@ class ChatRequest(BaseModel):
         default=False,
         description="Include full document chunk text in ``sources`` (Phase 10.6).",
     )
+    mode: AskMode = Field(
+        default=AskMode.EXECUTE,
+        description="execute runs SQL against the DB; dry_run validates only (no rows).",
+    )
+    use_llm: bool = Field(
+        default=True,
+        description="When false, prefer trusted semantic SQL without LLM when matched.",
+    )
 
-    def to_domain(self) -> DomainAskRequest:
+    def to_domain(
+        self,
+        *,
+        governance_context: object | None = None,
+    ) -> DomainAskRequest:
+        from insightai.domain.models.governance import GovernanceContext
+
+        ctx = governance_context if isinstance(governance_context, GovernanceContext) else None
         return DomainAskRequest(
             question=self.question.strip(),
             timeout_seconds=self.timeout_seconds,
             route=self.route,
+            mode=self.mode,
+            use_llm=self.use_llm,
+            governance_context=ctx,
         )
 
 
@@ -135,6 +153,11 @@ class ChatResponse(BaseModel):
     )
     sql: str | None = None
     data: ChatDataSchema | None = None
+    mode: str = AskMode.EXECUTE.value
+    dry_run: bool = False
+    generation_source: str = "llm"
+    trusted_asset_id: str | None = None
+    trusted_match_confidence: str | None = None
 
     @classmethod
     def from_domain(
@@ -144,13 +167,14 @@ class ChatResponse(BaseModel):
         request: ChatRequest,
     ) -> ChatResponse:
         request_id = request_id_var.get() or "unknown"
+        dry_run = result.dry_run
         row_count = (
             result.execution.query_result.row_count
             if result.execution is not None
             else result.answer.answer.row_count
         )
         data: ChatDataSchema | None = None
-        if request.include_data and result.execution is not None:
+        if request.include_data and result.execution is not None and not dry_run:
             columns = [col.name for col in result.execution.query_result.columns]
             data = ChatDataSchema(
                 columns=columns,
@@ -159,8 +183,20 @@ class ChatResponse(BaseModel):
                 truncated=result.execution.query_result.truncated,
             )
         sql: str | None = None
-        if request.include_sql and result.execution is not None:
-            sql = result.execution.sql
+        if request.include_sql and result.sql is not None and result.sql.sql.has_sql:
+            sql = (
+                result.execution.sql
+                if result.execution is not None
+                else result.sql.sql.sql
+            )
+        generation_source = "llm"
+        trusted_asset_id: str | None = None
+        trusted_match_confidence: str | None = None
+        if result.sql is not None:
+            generation_source = result.sql.sql.generation_source.value
+            trusted_asset_id = result.sql.sql.trusted_asset_id
+            if result.sql.sql.trusted_match_confidence is not None:
+                trusted_match_confidence = result.sql.sql.trusted_match_confidence.value
 
         sources, citations = build_chat_sources(
             result,
@@ -189,6 +225,11 @@ class ChatResponse(BaseModel):
             ),
             sql=sql,
             data=data,
+            mode=request.mode.value,
+            dry_run=dry_run,
+            generation_source=generation_source,
+            trusted_asset_id=trusted_asset_id,
+            trusted_match_confidence=trusted_match_confidence,
         )
 
 

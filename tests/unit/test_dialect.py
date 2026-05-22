@@ -53,13 +53,23 @@ def test_wrap_with_row_cap_invalid_limit() -> None:
 
 def test_wrap_with_row_cap_mssql_with_cte() -> None:
     sql = (
-        "WITH pine AS (SELECT id FROM school_classroom) "
-        "SELECT name FROM pine ORDER BY name"
+        "WITH P_campus AS (SELECT id FROM school_classroom) "
+        "SELECT name FROM P_campus ORDER BY name"
     )
     wrapped = wrap_with_row_cap(sql, DatabaseKind.MSSQL, 1001)
     assert wrapped.upper().startswith("WITH ")
     assert "SELECT TOP 1001" in wrapped.upper()
     assert "insightai_sub" not in wrapped
+
+
+def test_wrap_with_row_cap_preserves_smaller_top() -> None:
+    sql = (
+        "SELECT TOP 1 u.id, u.first_name, u.last_name, u.birthday "
+        "FROM accounts_user u ORDER BY u.birthday ASC"
+    )
+    wrapped = wrap_with_row_cap(sql, DatabaseKind.MSSQL, 1001)
+    assert "TOP 1" in wrapped.upper()
+    assert "TOP 1001" not in wrapped.upper()
 
 
 def test_wrap_with_row_cap_mssql_union() -> None:

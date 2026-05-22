@@ -10,6 +10,8 @@ Write one read-only SQL query that answers the user question below.
 
 {schema_context}
 
+{domain_context_section}
+
 ## Execution environment
 
 - SQL dialect: **{sql_dialect}**

@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 from insightai.api.audit_context import bind_chat_audit_context
+from insightai.api.auth.dependencies import get_governance_context
 from insightai.api.chat_session_resolve import resolve_chat_session_id
 from insightai.api.deps import get_ask_use_case, get_chat_session_use_case, get_settings
 from insightai.api.schemas.chat import (
@@ -68,7 +69,9 @@ async def chat(
         await session_use_case.require_session(session_id)
     bind_chat_audit_context(request, session_id=session_id)
 
-    result = await use_case.execute(body.to_domain())
+    result = await use_case.execute(
+        body.to_domain(governance_context=get_governance_context(request)),
+    )
 
     if session_id:
         await session_use_case.record_exchange(
@@ -123,7 +126,10 @@ async def chat_stream(
     response_request = body.model_copy(update={"session_id": session_id})
 
     async def event_generator() -> AsyncIterator[str]:
-        async for stream_event in use_case.execute_stream(body.to_domain()):
+        domain_request = body.to_domain(
+            governance_context=get_governance_context(request),
+        )
+        async for stream_event in use_case.execute_stream(domain_request):
             if stream_event.kind == "done" and stream_event.result is not None and session_id:
                 await session_use_case.record_exchange(
                     session_id,

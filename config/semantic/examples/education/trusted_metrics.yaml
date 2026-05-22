@@ -1,0 +1,64 @@
+# Education vertical — example trusted metrics (copy into ../trusted_metrics.yaml).
+# Names are placeholders: rename classrooms/campuses to match your database.
+
+metrics:
+  - id: active_student_count
+    title: Active students
+    description: Count of users with the Student role who are active.
+    sql: |
+      SELECT COUNT(DISTINCT u.id) AS active_student_count
+      FROM dbo.accounts_user AS u
+      INNER JOIN dbo.accounts_user_roles AS ur ON ur.user_id = u.id
+      INNER JOIN dbo.accounts_role AS r ON r.id = ur.role_id
+      WHERE r.name = N'Student'
+        AND u.is_active = 1
+    question_hints:
+      - how many active students
+      - count active students
+      - number of students in the system
+    tags: [students, enrollment, education]
+    enabled: true
+    dialect: mssql
+
+  - id: students_per_campus_example
+    title: Students per campus (Campus A keyword)
+    description: Campus scope via school_childschool; match campus title with LIKE.
+    sql: |
+      SELECT COUNT(DISTINCT u.id) AS student_count
+      FROM dbo.school_school AS s
+      INNER JOIN dbo.school_childschool AS cs ON cs.school_id = s.id
+      INNER JOIN dbo.accounts_user AS u ON u.id = cs.child_id
+      INNER JOIN dbo.accounts_user_roles AS ur ON ur.user_id = u.id
+      INNER JOIN dbo.accounts_role AS r ON r.id = ur.role_id
+      WHERE r.name = N'Student'
+        AND u.is_active = 1
+        AND s.title LIKE N'%Campus A%'
+    question_hints:
+      - how many students at campus a
+      - how many kids in campus a
+    tags: [campus, enrollment, education]
+    enabled: true
+    dialect: mssql
+
+  - id: top_five_classrooms_by_enrollment
+    title: Top five classrooms by student count
+    description: Roster via school_classroomchild; not general_post_classrooms.
+    sql: |
+      SELECT TOP 5
+             c.classroom_name,
+             COUNT(DISTINCT cc.child_id) AS student_count
+      FROM dbo.school_classroom AS c
+      INNER JOIN dbo.school_classroomchild AS cc ON cc.classroom_id = c.id
+      INNER JOIN dbo.accounts_user AS u ON u.id = cc.child_id
+      INNER JOIN dbo.accounts_user_roles AS ur ON ur.user_id = u.id
+      INNER JOIN dbo.accounts_role AS r ON r.id = ur.role_id
+      WHERE r.name = N'Student'
+        AND u.is_active = 1
+      GROUP BY c.id, c.classroom_name
+      ORDER BY student_count DESC
+    question_hints:
+      - top five classrooms by students
+      - top 5 classrooms by enrollment
+    tags: [classroom, ranking, education]
+    enabled: true
+    dialect: mssql

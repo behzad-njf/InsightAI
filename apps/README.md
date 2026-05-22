@@ -35,7 +35,7 @@ uvicorn insightai.main:create_app --factory --reload
 python apps/serve_demo.py
 ```
 
-Open http://127.0.0.1:8765 — enter a question and click **Ask**.
+Open http://127.0.0.1:8765 — ChatGPT-style UI with **New chat**, sidebar history (stored in the browser), and server **sessions** (`POST /api/v1/chat/sessions` + streaming). Configure API URL/key under **Settings**.
 
 ## Requirements
 

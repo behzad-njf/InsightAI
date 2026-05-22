@@ -21,6 +21,21 @@ def make_settings(**overrides: Any) -> Settings:
     return Settings(_env_file=None, **overrides)  # type: ignore[arg-type,call-arg]
 
 
+def mock_app_database_components() -> MagicMock:
+    """App DB mock that does not treat MagicMock.verify as a valid key."""
+    mock = MagicMock()
+    mock.api_key_store.verify.return_value = None
+    return mock
+
+
+def mock_governance_components() -> MagicMock:
+    from insightai.infrastructure.governance.noop_enforcer import NoOpGovernanceEnforcer
+
+    mock = MagicMock()
+    mock.enforcer = NoOpGovernanceEnforcer()
+    return mock
+
+
 @pytest.fixture(autouse=True)
 def _reset_settings_cache() -> Generator[None, None, None]:
     clear_settings_cache()
@@ -79,6 +94,14 @@ def api_client(
             "insightai.main.build_database_components",
             return_value=mock_database_components,
         ),
+        patch(
+            "insightai.main.build_app_database_components",
+            return_value=mock_app_database_components(),
+        ),
+        patch(
+            "insightai.main.build_governance_components",
+            return_value=mock_governance_components(),
+        ),
     ):
         app = create_app()
         with TestClient(app) as client:
@@ -101,7 +124,15 @@ def api_client_no_database(
         ),
         patch(
             "insightai.main.build_database_components",
-            side_effect=ConfigurationError("database not configured"),
+            side_effect=ConfigurationError("Database URL not configured."),
+        ),
+        patch(
+            "insightai.main.build_app_database_components",
+            return_value=mock_app_database_components(),
+        ),
+        patch(
+            "insightai.main.build_governance_components",
+            return_value=mock_governance_components(),
         ),
     ):
         app = create_app()

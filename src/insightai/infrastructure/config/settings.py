@@ -12,7 +12,7 @@ from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from insightai.domain.exceptions import ConfigurationError
-from insightai.domain.models.auth import ApiAuthMode
+from insightai.domain.models.auth import ApiAuthMode, ApiKeyAuthSource
 from insightai.domain.models.database import DatabaseKind, QueryExecutionOptions
 from insightai.domain.models.embedding import EmbeddingProviderKind
 from insightai.domain.models.llm import AIFrameworkKind, LLMProviderKind
@@ -188,6 +188,18 @@ class Settings(BaseSettings):
         le=1.0,
         description="Optional cosine similarity floor for retrieval.",
     )
+    sql_knowledge_context_enabled: bool = Field(
+        default=True,
+        description=(
+            "When RAG is configured, retrieve Knowledge/ excerpts into SQL generation prompts."
+        ),
+    )
+    sql_knowledge_top_k: int = Field(
+        default=3,
+        ge=1,
+        le=20,
+        description="Top-k knowledge chunks to inject for SQL generation.",
+    )
     rag_enabled: bool = Field(
         default=False,
         description="Enable hybrid SQL/RAG routing on /chat and /ask.",
@@ -324,7 +336,11 @@ class Settings(BaseSettings):
     api_keys: str | None = Field(
         default=None,
         validation_alias=AliasChoices("INSIGHTAI_API_KEYS", "INSIGHTAI_API_KEY"),
-        description="Comma-separated API keys when api_auth_mode=api_key.",
+        description="Comma-separated API keys when api_auth_mode=api_key (env source).",
+    )
+    api_key_auth_source: ApiKeyAuthSource = Field(
+        default=ApiKeyAuthSource.BOTH,
+        description="API key validation: env | database | both (default both).",
     )
     jwt_secret: str | None = Field(
         default=None,
@@ -417,6 +433,35 @@ class Settings(BaseSettings):
     # --- Schema ---
     schema_markdown_path: Path = Path("schema/database_schema.md")
 
+    # --- Trusted semantic layer (Phase 11) ---
+    semantic_enabled: bool = Field(
+        default=False,
+        description="Enable trusted metrics / example query matching before LLM SQL.",
+    )
+    semantic_path: Path = Field(
+        default=Path("config/semantic"),
+        description="Directory with trusted_metrics.yaml and example_queries.yaml.",
+    )
+
+    # --- Governance & data policy (Phase 12) ---
+    governance_enabled: bool = Field(
+        default=False,
+        description="Enable SQL governance enforcer (scope filters, masks, table policy).",
+    )
+    governance_path: Path = Field(
+        default=Path("config/governance"),
+        description="Directory with policies.yaml (scope dimensions and role rules).",
+    )
+
+    # --- App database (Phase 16) — platform metadata, API keys, feedback ---
+    app_database_url: str | None = Field(
+        default=None,
+        description=(
+            "SQLAlchemy URL for InsightAI platform DB (Postgres prod, SQLite dev). "
+            "Defaults to sqlite under data/insightai_app.db when unset."
+        ),
+    )
+
     @field_validator("log_level")
     @classmethod
     def normalize_log_level(cls, value: str) -> str:
@@ -426,6 +471,8 @@ class Settings(BaseSettings):
         "schema_markdown_path",
         "rag_default_index_path",
         "rag_knowledge_path",
+        "semantic_path",
+        "governance_path",
         mode="before",
     )
     @classmethod
@@ -452,6 +499,16 @@ class Settings(BaseSettings):
         msg = f"Invalid api_auth_mode: {value!r}"
         raise ValueError(msg)
 
+    @field_validator("api_key_auth_source", mode="before")
+    @classmethod
+    def coerce_api_key_auth_source(cls, value: object) -> ApiKeyAuthSource:
+        if isinstance(value, ApiKeyAuthSource):
+            return value
+        if isinstance(value, str):
+            return ApiKeyAuthSource(value.strip().lower())
+        msg = f"Invalid api_key_auth_source: {value!r}"
+        raise ValueError(msg)
+
     @model_validator(mode="after")
     def validate_production_safety(self) -> Settings:
         if self.env == AppEnvironment.PRODUCTION and self.debug:
@@ -460,8 +517,15 @@ class Settings(BaseSettings):
         if self.env == AppEnvironment.PRODUCTION and self.api_auth_mode == ApiAuthMode.NONE:
             msg = "INSIGHTAI_API_AUTH_MODE must be 'api_key' or 'jwt' in production (not 'none')."
             raise ValueError(msg)
-        if self.api_auth_mode == ApiAuthMode.API_KEY and not self.parsed_api_keys():
-            msg = "INSIGHTAI_API_KEYS is required when INSIGHTAI_API_AUTH_MODE=api_key."
+        if (
+            self.api_auth_mode == ApiAuthMode.API_KEY
+            and self.api_key_auth_source == ApiKeyAuthSource.ENV
+            and not self.parsed_api_keys()
+        ):
+            msg = (
+                "INSIGHTAI_API_KEYS is required when INSIGHTAI_API_AUTH_MODE=api_key "
+                "and INSIGHTAI_API_KEY_AUTH_SOURCE=env."
+            )
             raise ValueError(msg)
         if self.api_auth_mode == ApiAuthMode.JWT and (
             not self.jwt_secret or not self.jwt_secret.strip()
@@ -546,6 +610,33 @@ class Settings(BaseSettings):
     def resolved_rag_default_index_path(self) -> Path:
         """Absolute path to the default JSONL index written by ingest."""
         path = self.rag_default_index_path
+        if path.is_absolute():
+            return path.resolve()
+        return (self.project_root / path).resolve()
+
+    def resolved_app_database_url(self) -> str:
+        """
+        SQLAlchemy URL for the platform app database.
+
+        Separate from the customer readonly analytics connection. When unset, uses
+        ``<project_root>/data/insightai_app.db`` (SQLite) for local development.
+        """
+        if self.app_database_url and self.app_database_url.strip():
+            return normalize_sqlalchemy_url(self.app_database_url.strip())
+        db_path = (self.project_root / "data" / "insightai_app.db").resolve()
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+        return f"sqlite:///{db_path.as_posix()}"
+
+    def resolved_semantic_path(self) -> Path:
+        """Absolute path to the trusted semantic config directory."""
+        path = self.semantic_path
+        if path.is_absolute():
+            return path.resolve()
+        return (self.project_root / path).resolve()
+
+    def resolved_governance_path(self) -> Path:
+        """Absolute path to the governance policy directory."""
+        path = self.governance_path
         if path.is_absolute():
             return path.resolve()
         return (self.project_root / path).resolve()
@@ -669,6 +760,7 @@ class Settings(BaseSettings):
             "database_url",
             "database_readonly_url",
             "rag_database_url",
+            "app_database_url",
         )
         for key in secret_fields:
             if getattr(self, key, None):

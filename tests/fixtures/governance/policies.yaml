@@ -1,0 +1,32 @@
+# Test fixture — enabled catalog for Phase 12.2 unit tests.
+enabled: true
+
+scope_dimensions:
+  campus:
+    description: "Example campus scope"
+    sql_bindings:
+      - table: school_school
+        column: id
+        operator: in_principal_attribute
+        attribute: campus_ids
+
+roles:
+  analyst:
+    allowed_tables: ["*"]
+    apply_scope_dimensions: [campus]
+    column_masks:
+      - column: email
+        strategy: exclude
+      - column: phone
+        strategy: exclude
+    missing_attribute_action: deny
+  admin:
+    allowed_tables: ["*"]
+    apply_scope_dimensions: []
+    column_masks: []
+  restricted:
+    allowed_tables: ["school_school"]
+    apply_scope_dimensions: []
+    column_masks: []
+
+default_missing_attribute_action: deny

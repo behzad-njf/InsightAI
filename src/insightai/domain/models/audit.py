@@ -12,6 +12,7 @@ class AuditContext(BaseModel):
 
     session_id: str | None = None
     auth_subject: str | None = None
+    api_key_id: str | None = None
 
     model_config = {"frozen": True}
 
@@ -37,6 +38,8 @@ class AskAuditComplete(BaseModel):
     question_length: int = Field(ge=0)
     session_id: str | None = None
     auth_subject: str | None = None
+    auth_api_key_id: str | None = None
+    auth_roles: list[str] = Field(default_factory=list)
     stream: bool = False
     schema_table_count: int = Field(ge=0)
     tables_used: list[str] = Field(default_factory=list)
@@ -64,6 +67,14 @@ class AskAuditComplete(BaseModel):
         default=0,
         ge=0,
         description="Number of document chunks retrieved for RAG / hybrid.",
+    )
+    governance_applied: bool = Field(
+        default=False,
+        description="True when Phase 12 governance modified the SQL.",
+    )
+    governance_dimensions_applied: list[str] = Field(
+        default_factory=list,
+        description="Scope dimension ids injected by governance.",
     )
 
     model_config = {"frozen": True}
@@ -95,6 +106,10 @@ class AskAuditFailure(BaseModel):
     """Failed ask pipeline outcome for the audit log."""
 
     request_id: str
+    governance_denied: bool = Field(
+        default=False,
+        description="True when failure was caused by governance policy denial.",
+    )
     question_length: int = Field(ge=0)
     error_message: str = Field(min_length=1)
     error_code: str | None = None

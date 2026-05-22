@@ -1,0 +1,33 @@
+# Education vertical — governance starter pack (example only).
+# NOT loaded automatically. Copy/adapt into config/governance/policies.yaml
+#
+# Placeholder names only (Campus A, Example) — replace ids with your warehouse values.
+# Guide: docs/GOVERNANCE.md
+
+enabled: true
+
+scope_dimensions:
+  campus:
+    description: "Example school-site scope (education deployments)"
+    sql_bindings:
+      - table: school_school
+        column: id
+        operator: in_principal_attribute
+        attribute: campus_ids
+
+roles:
+  analyst:
+    allowed_tables: ["*"]
+    apply_scope_dimensions: [campus]
+    column_masks:
+      - column: email
+        strategy: exclude
+      - column: phone
+        strategy: exclude
+    missing_attribute_action: deny
+  admin:
+    allowed_tables: ["*"]
+    apply_scope_dimensions: []
+    column_masks: []
+
+default_missing_attribute_action: deny
