@@ -1,0 +1,34 @@
+# InsightAI — runtime dependencies (Python 3.12+)
+#
+# Install:
+#   python -m venv .venv && source .venv/bin/activate
+#   pip install -r requirements.txt
+#
+# Common add-ons (pick what you use):
+#   pip install -r requirements-mssql.txt   # Microsoft SQL Server (pyodbc)
+#   pip install -r requirements-rag.txt     # Knowledge PDF ingest + pgvector
+#   pip install -r requirements-dev.txt     # tests, ruff, mypy
+#
+# Equivalent editable install (recommended for development):
+#   pip install -e ".[mssql,rag,dev]"
+
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+pydantic>=2.9.0
+pydantic-settings>=2.6.0
+sqlalchemy>=2.0.36
+psycopg2-binary>=2.9.10
+groq>=0.13.0
+openai>=1.55.0
+openrouter>=0.9.0
+httpx>=0.28.0
+llama-index-core>=0.12.0
+llama-index-llms-openai>=0.3.0
+structlog>=24.4.0
+python-dotenv>=1.0.1
+tenacity>=9.0.0
+sqlglot>=26.0.0
+PyJWT>=2.8.0
+PyYAML>=6.0.2
+alembic>=1.14.0
+bcrypt>=4.2.0

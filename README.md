@@ -244,8 +244,8 @@ source .venv/bin/activate
 cp .env.example .env
 # Set LLM API key (GROQ_API_KEY, OPENAI_API_KEY, or OPENROUTER_API_KEY) and database settings
 
-pip install -e ".[dev]"
-# MSSQL: pip install -e ".[dev,mssql]"
+pip install -e ".[dev,mssql,rag]"
+# or: pip install -r requirements-dev.txt && pip install -r requirements-rag.txt
 
 uvicorn insightai.main:create_app --factory --reload
 # or: insightai

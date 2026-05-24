@@ -1,0 +1,3 @@
+# MSSQL readonly analytics (ODBC Driver 17 or 18 required on the host)
+-r requirements.txt
+pyodbc>=5.2.0

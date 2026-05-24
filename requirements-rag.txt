@@ -1,0 +1,4 @@
+# Hybrid RAG: PDF ingest + pgvector store (Postgres for vectors)
+-r requirements.txt
+pypdf>=5.0.0
+pgvector>=0.3.6
