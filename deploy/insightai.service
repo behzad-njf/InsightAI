@@ -1,0 +1,29 @@
+[Unit]
+Description=InsightAI API (natural language to SQL + RAG)
+Documentation=https://github.com/mrhib/InsightAI
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=insightai
+Group=insightai
+WorkingDirectory=/opt/InsightAI
+EnvironmentFile=/opt/InsightAI/.env
+
+# Production: no --reload (set INSIGHTAI_API_RELOAD=false in .env as well)
+ExecStart=/opt/InsightAI/.venv/bin/uvicorn insightai.main:create_app --factory --host 127.0.0.1 --port 8000
+
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=300
+
+# Startup may ingest Knowledge/ into RAG when INSIGHTAI_RAG_SYNC_KNOWLEDGE_ON_STARTUP=true
+StandardOutput=journal
+StandardError=journal
+
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
