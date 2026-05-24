@@ -13,6 +13,11 @@ from insightai.domain.models.sql_generation import (
     SQLGenerationResult,
 )
 
+# Always prepended to SQL domain context when Knowledge injection is enabled.
+_PINNED_SQL_KNOWLEDGE_FILES: tuple[str, ...] = (
+    "sql_never_guess_schema.md"
+)
+
 if TYPE_CHECKING:
     from insightai.application.use_cases.build_schema_context import BuildSchemaContextUseCase
     from insightai.application.use_cases.match_trusted_sql import MatchTrustedSQLUseCase
@@ -105,18 +110,40 @@ class GenerateSQLUseCase:
         )
 
     async def _load_domain_context(self, question: str) -> str | None:
-        """Inject Knowledge/ excerpts when RAG retrieval is configured."""
-        if (
-            self._retrieve_rag is None
-            or not self._settings.sql_knowledge_context_enabled
-        ):
+        """Inject pinned + retrieved Knowledge/ excerpts for SQL generation."""
+        if not self._settings.sql_knowledge_context_enabled:
             return None
-        from insightai.infrastructure.rag.source_format import format_rag_sources_for_prompt
 
-        retrieval = await self._retrieve_rag.execute(
-            question,
-            top_k=self._settings.sql_knowledge_top_k,
-        )
-        if not retrieval.sources:
+        sections: list[str] = []
+        pinned = self._load_pinned_sql_knowledge()
+        if pinned:
+            sections.append(pinned)
+
+        if self._retrieve_rag is not None:
+            from insightai.infrastructure.rag.source_format import format_rag_sources_for_prompt
+
+            retrieval = await self._retrieve_rag.execute(
+                question,
+                top_k=self._settings.sql_knowledge_top_k,
+            )
+            if retrieval.sources:
+                sections.append(format_rag_sources_for_prompt(retrieval))
+
+        if not sections:
             return None
-        return format_rag_sources_for_prompt(retrieval)
+        return "\n\n---\n\n".join(sections)
+
+    def _load_pinned_sql_knowledge(self) -> str | None:
+        """Load mandatory Knowledge files so SQL rules are not missed by retrieval."""
+        knowledge_dir = self._settings.resolved_rag_knowledge_path()
+        parts: list[str] = []
+        for filename in _PINNED_SQL_KNOWLEDGE_FILES:
+            path = knowledge_dir / filename
+            if not path.is_file():
+                continue
+            text = path.read_text(encoding="utf-8").strip()
+            if text:
+                parts.append(text)
+        if not parts:
+            return None
+        return "\n\n---\n\n".join(parts)

@@ -7,6 +7,7 @@ Put your organization's reference documents here for **domain-specific guidance*
 
 Examples (keep product-specific table and API details here, not in generic prompts):
 
+- **`sql_never_guess_schema.md`** — **never invent columns**; use `schema/database_schema.md` + other Knowledge files first
 - `classroom_roster_queries.md` — who is in a classroom
 - `classroom_enrollment_counts.md` — per-classroom / top-N counts via `school_classroomchild` (not `general_post_classrooms`)
 - `classroom_observations.md` — observation counts/lists via `school_observation` (not annual verification)
