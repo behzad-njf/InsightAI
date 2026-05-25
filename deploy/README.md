@@ -23,6 +23,7 @@ cp .env.example .env
 #   INSIGHTAI_API_RELOAD=false
 #   INSIGHTAI_API_HOST=127.0.0.1
 #   INSIGHTAI_API_PORT=8000
+#   INSIGHTAI_CORS_ALLOW_ORIGINS=https://your-frontend.example.com
 #   DB_HOST=127.0.0.1
 #   DB_PORT=1434
 ```

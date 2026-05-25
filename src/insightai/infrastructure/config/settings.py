@@ -54,6 +54,13 @@ class Settings(BaseSettings):
     api_host: str = "0.0.0.0"
     api_port: int = 8000
     api_reload: bool = False
+    cors_allow_origins: str | None = Field(
+        default=None,
+        description=(
+            "Comma-separated CORS Allow-Origin values (e.g. https://app.example.com). "
+            "Leave unset or empty to disable CORS middleware."
+        ),
+    )
 
     # --- LLM ---
     llm_provider: LLMProviderKind = LLMProviderKind.GROQ
@@ -542,6 +549,16 @@ class Settings(BaseSettings):
         if not self.api_keys or not self.api_keys.strip():
             return frozenset()
         return frozenset(part.strip() for part in self.api_keys.split(",") if part.strip())
+
+    def parsed_cors_allow_origins(self) -> list[str]:
+        """Browser origins allowed by CORS (comma-separated in ``INSIGHTAI_CORS_ALLOW_ORIGINS``)."""
+        if not self.cors_allow_origins or not self.cors_allow_origins.strip():
+            return []
+        return [
+            part.strip()
+            for part in self.cors_allow_origins.split(",")
+            if part.strip()
+        ]
 
     def require_jwt_secret(self) -> str:
         if not self.jwt_secret or not self.jwt_secret.strip():

@@ -20,7 +20,7 @@ from insightai.infrastructure.app_db.bootstrap import build_app_database_compone
 from insightai.infrastructure.ai.factory import build_ai_components
 from insightai.infrastructure.cache.bootstrap import build_cache
 from insightai.infrastructure.chat.bootstrap import build_chat_session_store
-from insightai.infrastructure.config.settings import AppEnvironment, get_settings
+from insightai.infrastructure.config.settings import get_settings
 from insightai.infrastructure.database.bootstrap import (
     build_database_components,
 )
@@ -134,28 +134,27 @@ def create_app() -> FastAPI:
     app.add_middleware(RequestIdMiddleware)
     app.add_middleware(TracingMiddleware)
     app.add_middleware(MetricsMiddleware)
-    _configure_development_cors(app, settings)
+    _configure_cors(app, settings)
     register_exception_handlers(app)
     app.include_router(metrics_router)
     app.include_router(api_v1_router)
     return app
 
 
-def _configure_development_cors(app: FastAPI, settings: object) -> None:
-    """Allow the local browser demo UI (``apps/serve_demo.py``) to call the API."""
+def _configure_cors(app: FastAPI, settings: object) -> None:
+    """Enable CORS when ``INSIGHTAI_CORS_ALLOW_ORIGINS`` lists one or more origins."""
     from insightai.infrastructure.config.settings import Settings
 
     assert isinstance(settings, Settings)
-    if settings.env != AppEnvironment.DEVELOPMENT:
+    origins = settings.parsed_cors_allow_origins()
+    if not origins:
         return
+
     from fastapi.middleware.cors import CORSMiddleware
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[
-            "http://127.0.0.1:8765",
-            "http://localhost:8765",
-        ],
+        allow_origins=origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

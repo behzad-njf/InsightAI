@@ -139,6 +139,21 @@ def test_production_rejects_debug() -> None:
         _settings_without_dotenv(env=AppEnvironment.PRODUCTION, debug=True)
 
 
+def test_parsed_cors_allow_origins_splits_comma_list() -> None:
+    settings = _settings_without_dotenv(
+        cors_allow_origins="http://127.0.0.1:8765, https://app.example.com",
+    )
+    assert settings.parsed_cors_allow_origins() == [
+        "http://127.0.0.1:8765",
+        "https://app.example.com",
+    ]
+
+
+def test_parsed_cors_allow_origins_empty_when_unset() -> None:
+    settings = _settings_without_dotenv()
+    assert settings.parsed_cors_allow_origins() == []
+
+
 def test_get_settings_is_cached(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("INSIGHTAI_LOG_LEVEL", "WARNING")
     clear_settings_cache()
