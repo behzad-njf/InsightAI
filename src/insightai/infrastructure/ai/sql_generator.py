@@ -10,6 +10,7 @@ from insightai.domain.ports.sql_generator import ISQLGenerator
 from insightai.domain.ports.sql_safety import ISQLSafetyValidator
 from insightai.infrastructure.ai.sql_postprocessor import postprocess_generated_sql
 from insightai.infrastructure.ai.sql_response_parser import parse_sql_generation_llm_output
+from insightai.infrastructure.ai.token_limits import cap_completion_tokens
 from insightai.infrastructure.config.settings import Settings, get_settings
 from insightai.infrastructure.logging.setup import get_logger
 from insightai.infrastructure.prompts.loader import (
@@ -17,7 +18,6 @@ from insightai.infrastructure.prompts.loader import (
     load_sql_generation_prompts,
     render_sql_generation_messages,
 )
-from insightai.infrastructure.ai.token_limits import cap_completion_tokens
 from insightai.infrastructure.security.composite_sql_validator import create_sql_safety_validator
 
 if TYPE_CHECKING:

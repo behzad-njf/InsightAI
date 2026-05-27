@@ -8,16 +8,15 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from insightai.application.use_cases.ask import AskUseCase
-from insightai.domain.models.ask import AskMode, AskRequest, AskStreamPhase
-from insightai.domain.models.database import QueryColumn, QueryExecutionOptions, QueryResult
-from insightai.domain.models.query_execution import RunQueryResult, RunQuerySQLSource
-from insightai.domain.models.schema import SchemaContextResult
 from insightai.domain.models.answer import (
     AnswerGenerationResult,
     GenerateAnswerResult,
 )
+from insightai.domain.models.ask import AskMode, AskRequest, AskStreamPhase
+from insightai.domain.models.database import QueryColumn, QueryExecutionOptions, QueryResult
+from insightai.domain.models.query_execution import RunQueryResult, RunQuerySQLSource
+from insightai.domain.models.schema import SchemaContextResult
 from insightai.domain.models.sql_generation import (
-    GenerateSQLRequest,
     GenerateSQLResult,
     SQLGenerationConfidence,
     SQLGenerationResult,
@@ -61,7 +60,8 @@ def ask_use_case() -> AskUseCase:
     generate_sql.execute = AsyncMock(return_value=_sql_result())
     run_query = MagicMock()
     run_query.execute = AsyncMock()
-    run_query.validate_sql = AsyncMock(return_value="SELECT COUNT(*) FROM dbo.accounts_user WHERE is_active = 1")
+    dry_run_sql = "SELECT COUNT(*) FROM dbo.accounts_user WHERE is_active = 1"
+    run_query.validate_sql = AsyncMock(return_value=dry_run_sql)
     generate_answer = MagicMock()
     generate_answer.execute = AsyncMock(return_value=_answer_result())
     generate_answer.execute_stream = AsyncMock()

@@ -3,14 +3,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from insightai.application.use_cases.match_trusted_sql import MatchTrustedSQLUseCase
-from insightai.domain.ports.semantic_catalog_loader import ISemanticCatalogLoader
-from insightai.domain.ports.trusted_sql_matcher import ITrustedSQLMatcher
-from insightai.infrastructure.config.settings import Settings
 from insightai.infrastructure.logging.setup import get_logger
 from insightai.infrastructure.semantic.trusted_matcher import TrustedSQLMatcher
 from insightai.infrastructure.semantic.yaml_loader import YamlSemanticCatalogLoader
+
+if TYPE_CHECKING:
+    from insightai.domain.ports.semantic_catalog_loader import ISemanticCatalogLoader
+    from insightai.domain.ports.trusted_sql_matcher import ITrustedSQLMatcher
+    from insightai.infrastructure.config.settings import Settings
 
 logger = get_logger(__name__)
 

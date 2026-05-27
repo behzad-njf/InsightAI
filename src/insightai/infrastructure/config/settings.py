@@ -180,7 +180,10 @@ class Settings(BaseSettings):
     )
     rag_database_url: str | None = Field(
         default=None,
-        description="PostgreSQL URL with write access for pgvector (defaults to DB_USER/DB_PASSWORD).",
+        description=(
+            "PostgreSQL URL with write access for pgvector "
+            "(defaults to DB_USER/DB_PASSWORD)."
+        ),
     )
     rag_vector_table: str = Field(
         default="rag_document_chunks",

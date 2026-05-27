@@ -21,9 +21,11 @@ def required_attributes_for_roles(
     required: dict[str, set[str]] = {}
     for role_name, role in catalog.roles.items():
         missing_action = role.missing_attribute_action
-        if missing_action != MissingAttributeAction.DENY:
-            if catalog.default_missing_attribute_action != MissingAttributeAction.DENY:
-                continue
+        if (
+            missing_action != MissingAttributeAction.DENY
+            and catalog.default_missing_attribute_action != MissingAttributeAction.DENY
+        ):
+            continue
         attrs: set[str] = set()
         for dim_id in role.apply_scope_dimensions:
             dimension = catalog.dimension(dim_id)

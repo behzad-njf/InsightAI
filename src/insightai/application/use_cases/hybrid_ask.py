@@ -16,7 +16,6 @@ from insightai.domain.models.ask import (
 )
 from insightai.domain.models.explainability import ExplainabilityBuildRequest
 from insightai.domain.models.hybrid import QueryRouteKind, RouteClassification
-from insightai.domain.ports.explainability_builder import IExplainabilityBuilder
 from insightai.infrastructure.config.settings import Settings, get_settings
 from insightai.infrastructure.explainability.builder import ExplainabilityBuilder
 from insightai.infrastructure.logging.setup import get_logger
@@ -39,6 +38,7 @@ if TYPE_CHECKING:
     from insightai.application.use_cases.generate_rag_answer import GenerateRAGAnswerUseCase
     from insightai.application.use_cases.retrieve_rag_context import RetrieveRAGContextUseCase
     from insightai.domain.ports.audit_logger import IAuditLogger
+    from insightai.domain.ports.explainability_builder import IExplainabilityBuilder
 
 logger = get_logger(__name__)
 
@@ -348,7 +348,9 @@ class HybridAskUseCase:
                 ExplainabilityBuildRequest(
                     question=request.question,
                     route=classification,
-                    schema_context=sql_result.sql.schema_context if sql_result.sql is not None else None,
+                    schema_context=(
+                        sql_result.sql.schema_context if sql_result.sql is not None else None
+                    ),
                     sql_generation=sql_result.sql.sql if sql_result.sql is not None else None,
                     governance=sql_result.governance_decision,
                     rag_retrieval=retrieval,

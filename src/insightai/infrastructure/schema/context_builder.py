@@ -248,7 +248,8 @@ class SchemaContextBuilder:
             title_lower = pattern.title.lower()
             sql_lower = pattern.sql.lower()
             score = 0.0
-            if any(token in title_lower or token in sql_lower for token in tokens if len(token) > 3):
+            long_tokens = [token for token in tokens if len(token) > 3]
+            if any(token in title_lower or token in sql_lower for token in long_tokens):
                 score += 2.0
             if any(table in title_lower or table in sql_lower for table in selected_lower):
                 score += 3.0

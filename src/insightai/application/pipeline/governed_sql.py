@@ -5,10 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from insightai.domain.models.governance import GovernanceContext, GovernanceDecision
-from insightai.domain.models.sql_generation import GenerateSQLResult
-
 if TYPE_CHECKING:
+    from insightai.domain.models.governance import GovernanceContext, GovernanceDecision
+    from insightai.domain.models.sql_generation import GenerateSQLResult
     from insightai.domain.ports.governance import IGovernanceEnforcer
     from insightai.domain.ports.sql_safety import ISQLSafetyValidator
 

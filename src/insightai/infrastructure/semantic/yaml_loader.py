@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import yaml
 
@@ -16,6 +15,9 @@ from insightai.domain.models.semantic import (
 )
 from insightai.domain.ports.semantic_catalog_loader import ISemanticCatalogLoader
 from insightai.infrastructure.logging.setup import get_logger
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 logger = get_logger(__name__)
 

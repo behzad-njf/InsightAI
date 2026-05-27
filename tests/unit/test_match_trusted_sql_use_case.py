@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 from insightai.application.use_cases.match_trusted_sql import MatchTrustedSQLUseCase
 from insightai.domain.models.database import DatabaseKind
 from insightai.domain.models.semantic import TrustedSQLMatchRequest

@@ -13,12 +13,12 @@ from insightai.domain.models.api_key import (
     parse_attributes_arg,
     parse_roles_arg,
 )
+from insightai.infrastructure.app_db.bootstrap import build_app_database_components
+from insightai.infrastructure.config.settings import get_settings
 from insightai.infrastructure.governance.attribute_contract import (
     validate_key_attributes_for_catalog,
 )
 from insightai.infrastructure.governance.yaml_loader import YamlGovernancePolicyLoader
-from insightai.infrastructure.app_db.bootstrap import build_app_database_components
-from insightai.infrastructure.config.settings import get_settings
 from insightai.infrastructure.logging.setup import configure_logging
 
 
@@ -109,7 +109,12 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
 
     create_p = sub.add_parser("create", help="Generate a new API key (secret shown once)")
-    create_p.add_argument("--label", "-l", required=True, help="Human label, e.g. 'CRM integration'")
+    create_p.add_argument(
+        "--label",
+        "-l",
+        required=True,
+        help="Human label, e.g. 'CRM integration'",
+    )
     create_p.add_argument(
         "--roles",
         default=None,

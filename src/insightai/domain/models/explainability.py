@@ -7,25 +7,27 @@ why, how SQL was produced, validation/governance outcomes, and citation alignmen
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Self
+from typing import TYPE_CHECKING, Self
 
 from pydantic import BaseModel, Field, computed_field, field_validator
 
-from insightai.domain.models.governance import GovernanceDecision
 from insightai.domain.models.hybrid import (
     QueryRouteKind,
     RAGRetrievalResult,
     RAGSourceCitation,
     RouteClassification,
 )
-from insightai.domain.models.schema import SchemaContextResult
 from insightai.domain.models.semantic import (
     GenerationSource,
     TrustedAssetKind,
     TrustedMatchConfidence,
 )
-from insightai.domain.models.sql import SQLValidationResult
-from insightai.domain.models.sql_generation import SQLGenerationResult
+
+if TYPE_CHECKING:
+    from insightai.domain.models.governance import GovernanceDecision
+    from insightai.domain.models.schema import SchemaContextResult
+    from insightai.domain.models.sql import SQLValidationResult
+    from insightai.domain.models.sql_generation import SQLGenerationResult
 
 
 class ExplainabilityWarningSeverity(StrEnum):
@@ -153,9 +155,12 @@ class ExplainabilityGovernanceSummary(BaseModel):
             f"{rule.table}.{rule.column} IN ({len(rule.values)} values)"
             for rule in policy.row_filters_applied
         ]
+        denied_code = "GOVERNANCE_DENIED"
         return cls(
             applied=decision.applied,
-            policy_reason_code=policy.reason_code if policy.reason_code != "GOVERNANCE_DENIED" else None,
+            policy_reason_code=(
+                policy.reason_code if policy.reason_code != denied_code else None
+            ),
             policy_ids=(
                 [policy.reason_code]
                 if policy.reason_code and policy.reason_code != "GOVERNANCE_DENIED"
@@ -261,7 +266,10 @@ class ExplainabilityPayload(BaseModel):
         return {entry.table_name: list(entry.match_reasons) for entry in self.schema_selection}
 
     @classmethod
-    def schema_selection_from_context(cls, context: SchemaContextResult) -> list[SchemaTableSelection]:
+    def schema_selection_from_context(
+        cls,
+        context: SchemaContextResult,
+    ) -> list[SchemaTableSelection]:
         return [
             SchemaTableSelection(
                 table_name=entry.table.name,
@@ -273,7 +281,10 @@ class ExplainabilityPayload(BaseModel):
         ]
 
     @classmethod
-    def rag_citations_from_retrieval(cls, retrieval: RAGRetrievalResult) -> list[RAGExplainabilityCitation]:
+    def rag_citations_from_retrieval(
+        cls,
+        retrieval: RAGRetrievalResult,
+    ) -> list[RAGExplainabilityCitation]:
         return [
             RAGExplainabilityCitation.from_source(index, source)
             for index, source in enumerate(retrieval.sources)

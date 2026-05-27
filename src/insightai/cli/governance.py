@@ -15,7 +15,9 @@ def _resolve_governance_dir(path: str | None) -> Path:
     settings = get_settings()
     if path:
         candidate = Path(path)
-        return candidate.resolve() if candidate.is_absolute() else (settings.project_root / candidate).resolve()
+        if candidate.is_absolute():
+            return candidate.resolve()
+        return (settings.project_root / candidate).resolve()
     return settings.resolved_governance_path()
 
 

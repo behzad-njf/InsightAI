@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from sqlglot import exp
 
-from insightai.domain.models.database import DatabaseKind
 from insightai.domain.models.governance import ColumnMaskStrategy, MaskRule, RowFilterRule
 from insightai.infrastructure.governance.table_match import (
     is_table_allowed,
@@ -15,6 +16,9 @@ from insightai.infrastructure.security.sqlglot_integration import (
     is_select_expression,
     parse_sql,
 )
+
+if TYPE_CHECKING:
+    from insightai.domain.models.database import DatabaseKind
 
 
 def extract_query_tables(expression: exp.Expression) -> set[str]:
@@ -99,10 +103,7 @@ def apply_row_filters(
         for cond in extra_conditions[1:]:
             combined = exp.and_(combined, cond)
         existing = select.args.get("where")
-        if existing:
-            merged = exp.and_(existing, combined)
-        else:
-            merged = combined
+        merged = exp.and_(existing, combined) if existing else combined
         select.set("where", exp.Where(this=merged))
     return expression
 

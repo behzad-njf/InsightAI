@@ -20,7 +20,9 @@ def _resolve_semantic_dir(path: str | None) -> Path:
     settings = get_settings()
     if path:
         candidate = Path(path)
-        return candidate.resolve() if candidate.is_absolute() else (settings.project_root / candidate).resolve()
+        if candidate.is_absolute():
+            return candidate.resolve()
+        return (settings.project_root / candidate).resolve()
     return settings.resolved_semantic_path()
 
 
@@ -84,7 +86,12 @@ def build_test_match_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--path", type=str, default=None, help="Semantic config directory.")
     parser.add_argument("--question", type=str, required=True, help="Natural language question.")
-    parser.add_argument("--sql", type=str, default=None, help="Optional SQL to match against catalog.")
+    parser.add_argument(
+        "--sql",
+        type=str,
+        default=None,
+        help="Optional SQL to match against catalog.",
+    )
     parser.add_argument(
         "--dialect",
         type=str,

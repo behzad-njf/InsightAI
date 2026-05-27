@@ -77,12 +77,13 @@ def _authenticate_api_key(
             if api_key is not None:
                 return AuthenticatedPrincipal.from_api_key(api_key)
 
-    if source in (ApiKeyAuthSource.ENV, ApiKeyAuthSource.BOTH):
-        if _is_valid_env_api_key(settings, candidate):
-            return AuthenticatedPrincipal(
-                subject=_env_api_key_subject(settings, candidate),
-                auth_method=ApiAuthMode.API_KEY,
-            )
+    if source in (ApiKeyAuthSource.ENV, ApiKeyAuthSource.BOTH) and _is_valid_env_api_key(
+        settings, candidate
+    ):
+        return AuthenticatedPrincipal(
+            subject=_env_api_key_subject(settings, candidate),
+            auth_method=ApiAuthMode.API_KEY,
+        )
 
     return None
 

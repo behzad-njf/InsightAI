@@ -11,7 +11,6 @@ from insightai.infrastructure.schema.context_builder import SchemaContextBuilder
 from insightai.infrastructure.schema.context_builder_factory import create_schema_context_builder
 from insightai.infrastructure.schema.json_parser import SchemaJsonParser
 from insightai.infrastructure.schema.registry import SchemaRegistry
-
 from tests.conftest import make_settings
 
 FIXTURE_JSON = Path(__file__).resolve().parents[1] / "fixtures" / "schema" / "django_doc_mini.json"
@@ -41,7 +40,8 @@ def test_factory_uses_default_without_plugin(demo_registry: SchemaRegistry) -> N
 
 
 def test_factory_loads_optional_plugin(demo_registry: SchemaRegistry) -> None:
-    plugin_path = Path(__file__).resolve().parents[2] / "context" / "plugins" / "schema_context_extended.py"
+    root = Path(__file__).resolve().parents[2]
+    plugin_path = root / "context" / "plugins" / "schema_context_extended.py"
     if not plugin_path.is_file():
         pytest.skip("extended plugin not present locally")
     settings = make_settings(

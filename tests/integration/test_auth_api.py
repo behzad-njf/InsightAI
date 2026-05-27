@@ -24,7 +24,6 @@ def chat_client_api_key_auth() -> Generator[TestClient, None, None]:
         database_readonly_url="sqlite:///:memory:",
     )
     from insightai.main import create_app
-
     from tests.conftest import mock_app_database_components
 
     with (

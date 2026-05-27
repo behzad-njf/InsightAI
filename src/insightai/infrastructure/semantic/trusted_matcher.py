@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from insightai.domain.models.database import DatabaseKind
+from typing import TYPE_CHECKING
+
 from insightai.domain.models.semantic import (
     ExampleQuery,
     SemanticCatalog,
@@ -13,6 +14,9 @@ from insightai.domain.models.semantic import (
 )
 from insightai.domain.ports.trusted_sql_matcher import ITrustedSQLMatcher
 from insightai.infrastructure.semantic.sql_normalizer import normalize_question, normalize_sql
+
+if TYPE_CHECKING:
+    from insightai.domain.models.database import DatabaseKind
 
 
 class TrustedSQLMatcher(ITrustedSQLMatcher):

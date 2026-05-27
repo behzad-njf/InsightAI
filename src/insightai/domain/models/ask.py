@@ -9,13 +9,13 @@ from pydantic import BaseModel, Field
 
 from insightai.domain.models.answer import GenerateAnswerResult  # noqa: TC001
 from insightai.domain.models.database import DatabaseKind  # noqa: TC001
-from insightai.domain.models.hybrid import QueryRouteKind, RAGRetrievalResult  # noqa: TC001
-from insightai.domain.models.query_execution import RunQueryResult  # noqa: TC001
 from insightai.domain.models.explainability import ExplainabilityPayload  # noqa: TC001
 from insightai.domain.models.governance import (  # noqa: TC001
     GovernanceContext,
     GovernanceDecision,
 )
+from insightai.domain.models.hybrid import QueryRouteKind, RAGRetrievalResult  # noqa: TC001
+from insightai.domain.models.query_execution import RunQueryResult  # noqa: TC001
 from insightai.domain.models.sql_generation import GenerateSQLResult  # noqa: TC001
 
 

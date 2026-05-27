@@ -8,8 +8,11 @@ from insightai.infrastructure.schema.loader import (
     get_schema_repository,
     resolve_schema_path,
 )
-from insightai.infrastructure.schema.schema_loader import load_schema_document, resolve_schema_cache_path
 from insightai.infrastructure.schema.repository import FileSchemaRepository
+from insightai.infrastructure.schema.schema_loader import (
+    load_schema_document,
+    resolve_schema_cache_path,
+)
 
 __all__ = [
     "FileSchemaRepository",

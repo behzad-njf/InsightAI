@@ -20,8 +20,8 @@ from insightai.domain.models.database import (
     QueryExecutionOptions,
     QueryResult,
 )
-from insightai.domain.models.query_execution import RunQueryResult, RunQuerySQLSource
 from insightai.domain.models.hybrid import QueryRouteKind
+from insightai.domain.models.query_execution import RunQueryResult, RunQuerySQLSource
 from insightai.domain.models.schema import SchemaContextResult
 from insightai.domain.models.sql_generation import (
     GenerateSQLResult,

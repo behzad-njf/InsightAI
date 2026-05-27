@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
-from insightai.domain.models.database import DatabaseKind
+from typing import TYPE_CHECKING
+
 from insightai.domain.models.semantic import _normalize_question_phrase
 from insightai.infrastructure.security.sqlglot_integration import (
     SqlglotParseError,
     canonicalize_sql,
     parse_sql,
 )
+
+if TYPE_CHECKING:
+    from insightai.domain.models.database import DatabaseKind
 
 
 def normalize_sql(sql: str, *, kind: DatabaseKind) -> str | None:

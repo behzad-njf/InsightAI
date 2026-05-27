@@ -18,8 +18,8 @@ from insightai.api.schemas.chat import (
 )
 from insightai.api.sse import format_sse
 from insightai.api.v1.routes import chat_sessions
-from insightai.domain.ports.ask_pipeline import IAskPipeline
 from insightai.application.use_cases.chat_session import ChatSessionUseCase
+from insightai.domain.ports.ask_pipeline import IAskPipeline
 from insightai.infrastructure.config.settings import Settings
 from insightai.infrastructure.logging.setup import request_id_var
 

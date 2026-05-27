@@ -45,7 +45,12 @@ def test_build_sql_path_with_validation_and_schema_context() -> None:
                 match_reasons=["token index: orders"],
             ),
         ],
-        join_patterns=[JoinPatternMetadata(title="Orders with customers", sql="SELECT ... JOIN ...")],
+        join_patterns=[
+            JoinPatternMetadata(
+                title="Orders with customers",
+                sql="SELECT ... JOIN ...",
+            ),
+        ],
         context_markdown="## Schema context",
         table_names=["demo_orders"],
     )

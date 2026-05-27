@@ -5,7 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from insightai.domain.models.governance import (
-    ColumnMaskStrategy,
     GovernancePolicyCatalog,
     MaskRule,
     MissingAttributeAction,
@@ -13,7 +12,6 @@ from insightai.domain.models.governance import (
     RolePolicy,
     RowFilterRule,
     ScopeBindingOperator,
-    ScopeDimension,
 )
 
 

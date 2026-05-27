@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field, field_validator
 
 if TYPE_CHECKING:
     from insightai.domain.models.api_key import ApiKey
-    from insightai.domain.models.auth import ApiAuthMode, AuthenticatedPrincipal
+    from insightai.domain.models.auth import AuthenticatedPrincipal
 
 
 class ScopeBindingOperator(StrEnum):
@@ -165,7 +165,10 @@ class RolePolicy(BaseModel):
             return [part.strip().lower() for part in value.split(",") if part.strip()]
         if isinstance(value, list):
             return [str(item).strip().lower() for item in value if str(item).strip()]
-        msg = f"apply_scope_dimensions must be a list or comma-separated string, got {type(value)!r}"
+        msg = (
+            "apply_scope_dimensions must be a list or comma-separated string, "
+            f"got {type(value)!r}"
+        )
         raise TypeError(msg)
 
 

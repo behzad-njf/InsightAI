@@ -38,6 +38,14 @@ _DOMAIN_ROW_LEGACY_RE = re.compile(
     r"^\|\s*`([^`]+)`\s*\|\s*(\d+)\s*\|\s*(.+?)\s*\|",
 )
 _DOMAIN_ROW_DJANGO_RE = re.compile(r"^\|\s*`([^`]+)`\s*\|\s*(\d+)\s*\|")
+_OUTGOING_FK_HEADERS = (
+    "**References (outgoing):**",
+    "**References (outgoing foreign keys):**",
+)
+_INCOMING_FK_HEADERS = (
+    "**Referenced by (incoming):**",
+    "**Referenced by (incoming foreign keys):**",
+)
 _HUB_ROW_LEGACY_RE = re.compile(
     r"^\|\s*`([^`]+)`\s*\|\s*(\d+)\s*\|\s*~?([\d,]+)\s*\|\s*(.+?)\s*\|",
 )
@@ -451,22 +459,20 @@ class SchemaMarkdownParser:
                         break
                     if doc_line.startswith("  "):
                         doc_lines.append(doc_line.strip())
-                    elif _TABLE_ANCHOR_RE.match(doc_line.strip()):
-                        break
-                    elif doc_line.startswith("## "):
+                    elif _TABLE_ANCHOR_RE.match(doc_line.strip()) or doc_line.startswith("## "):
                         break
                     i += 1
                 if doc_lines:
                     description = " ".join(doc_lines)
                 continue
 
-            if stripped_line in ("**References (outgoing):**", "**References (outgoing foreign keys):**"):
+            if stripped_line in _OUTGOING_FK_HEADERS:
                 fk_section = "outgoing"
                 in_columns = False
                 in_query_examples = False
                 i += 1
                 continue
-            if stripped_line in ("**Referenced by (incoming):**", "**Referenced by (incoming foreign keys):**"):
+            if stripped_line in _INCOMING_FK_HEADERS:
                 fk_section = "incoming"
                 in_columns = False
                 in_query_examples = False

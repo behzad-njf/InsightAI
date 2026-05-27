@@ -2,11 +2,8 @@
 
 from __future__ import annotations
 
-import json
 from datetime import UTC, datetime
 from pathlib import Path
-
-import pytest
 
 from insightai.domain.models.api_key import (
     ApiKey,

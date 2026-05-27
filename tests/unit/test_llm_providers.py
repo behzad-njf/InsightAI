@@ -8,7 +8,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from insightai.domain.exceptions import AIFrameworkNotSupportedError
 from insightai.domain.models.llm import (
     AIFrameworkKind,
     LLMMessage,

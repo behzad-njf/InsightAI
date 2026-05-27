@@ -50,12 +50,13 @@ def db_auth_client(
 
     from insightai.main import create_app
 
+    governance = mock_governance_components()
     with (
         patch("insightai.main.get_settings", return_value=settings),
         patch("insightai.main.build_ai_components", return_value=MagicMock()),
         patch("insightai.main.build_database_components", return_value=MagicMock()),
         patch("insightai.main.build_app_database_components", return_value=app_db),
-        patch("insightai.main.build_governance_components", return_value=mock_governance_components()),
+        patch("insightai.main.build_governance_components", return_value=governance),
     ):
         app = create_app()
         with TestClient(app) as client:

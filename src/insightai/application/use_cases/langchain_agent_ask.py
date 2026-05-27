@@ -7,17 +7,17 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from insightai.domain.exceptions import SQLGenerationError
+from insightai.domain.models.answer import (
+    AnswerGenerationResult,
+    GenerateAnswerRequest,
+    GenerateAnswerResult,
+)
 from insightai.domain.models.ask import (
     AskRequest,
     AskResult,
     AskStreamEvent,
     AskStreamPhase,
     AskTimings,
-)
-from insightai.domain.models.answer import (
-    AnswerGenerationResult,
-    GenerateAnswerRequest,
-    GenerateAnswerResult,
 )
 from insightai.domain.models.database import QueryColumn, QueryResult
 from insightai.domain.models.hybrid import QueryRouteKind

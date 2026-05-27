@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import pytest
 
-from insightai.domain.models.database import DatabaseKind
 from insightai.domain.models.semantic import (
     ExampleQuery,
     GenerationSource,

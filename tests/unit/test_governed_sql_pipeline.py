@@ -14,12 +14,12 @@ from insightai.domain.models.ask import AskRequest
 from insightai.domain.models.database import DatabaseKind
 from insightai.domain.models.governance import GovernanceDecision, Principal
 from insightai.domain.models.schema import SchemaContextResult
+from insightai.domain.models.sql import SQLValidationResult
 from insightai.domain.models.sql_generation import (
     GenerateSQLResult,
     SQLGenerationConfidence,
     SQLGenerationResult,
 )
-from insightai.domain.models.sql import SQLValidationResult
 from insightai.infrastructure.governance.enforcer import SqlGovernanceEnforcer
 from insightai.infrastructure.governance.yaml_loader import YamlGovernancePolicyLoader
 

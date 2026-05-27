@@ -35,9 +35,8 @@ def _parsed_row_limit(stripped: str, kind: DatabaseKind) -> int | None:
         return None
     if isinstance(limit_node, exp.Limit) and isinstance(
         limit_node.expression, exp.Literal
-    ):
-        if limit_node.expression.is_int:
-            return int(limit_node.expression.name)
+    ) and limit_node.expression.is_int:
+        return int(limit_node.expression.name)
     return None
 
 

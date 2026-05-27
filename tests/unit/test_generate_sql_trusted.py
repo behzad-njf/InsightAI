@@ -10,7 +10,6 @@ import pytest
 from insightai.application.use_cases.build_schema_context import BuildSchemaContextUseCase
 from insightai.application.use_cases.generate_sql import GenerateSQLUseCase
 from insightai.application.use_cases.match_trusted_sql import MatchTrustedSQLUseCase
-from insightai.domain.models.database import DatabaseKind
 from insightai.domain.models.schema import SchemaContextResult
 from insightai.domain.models.semantic import GenerationSource
 from insightai.domain.models.sql_generation import (

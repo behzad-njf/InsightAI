@@ -8,11 +8,13 @@ import pytest
 
 from insightai.infrastructure.config.settings import SchemaSourceKind
 from insightai.infrastructure.schema.json_parser import SchemaJsonParser
-from insightai.infrastructure.schema.markdown_parser import SchemaMarkdownParser, detect_markdown_format
-from insightai.infrastructure.schema.markdown_parser import MarkdownSchemaFormat
+from insightai.infrastructure.schema.markdown_parser import (
+    MarkdownSchemaFormat,
+    SchemaMarkdownParser,
+    detect_markdown_format,
+)
 from insightai.infrastructure.schema.registry import SchemaRegistry
 from insightai.infrastructure.schema.schema_loader import load_schema_document
-
 from tests.conftest import make_settings
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "schema"
@@ -59,7 +61,10 @@ def test_json_parser_hub_and_fks(django_registry: SchemaRegistry) -> None:
     assert orders.foreign_keys[0].parent_table == "demo_customers"
 
 
-def test_django_markdown_parser_matches_json_shape(django_md_document, django_json_document) -> None:
+def test_django_markdown_parser_matches_json_shape(
+    django_md_document,
+    django_json_document,
+) -> None:
     assert django_md_document.format == "django_db_schema_doc_markdown"
     md_names = {table.name for table in django_md_document.tables}
     json_names = {table.name for table in django_json_document.tables}

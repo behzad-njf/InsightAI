@@ -16,14 +16,15 @@ from insightai.api.routes.metrics import router as metrics_router
 from insightai.api.tracing_middleware import TracingMiddleware
 from insightai.api.v1.router import api_v1_router
 from insightai.domain.exceptions import ConfigurationError
-from insightai.infrastructure.app_db.bootstrap import build_app_database_components
 from insightai.infrastructure.ai.factory import build_ai_components
+from insightai.infrastructure.app_db.bootstrap import build_app_database_components
 from insightai.infrastructure.cache.bootstrap import build_cache
 from insightai.infrastructure.chat.bootstrap import build_chat_session_store
 from insightai.infrastructure.config.settings import get_settings
 from insightai.infrastructure.database.bootstrap import (
     build_database_components,
 )
+from insightai.infrastructure.governance.bootstrap import build_governance_components
 from insightai.infrastructure.logging.setup import configure_logging, get_logger
 from insightai.infrastructure.observability.bootstrap import build_audit_logger
 from insightai.infrastructure.observability.metrics import configure_metrics
@@ -32,7 +33,6 @@ from insightai.infrastructure.rag.bootstrap import build_rag_components
 from insightai.infrastructure.rag.knowledge_sync import sync_knowledge_on_startup
 from insightai.infrastructure.ratelimit.bootstrap import build_rate_limiter
 from insightai.infrastructure.schema.bootstrap import build_schema_components
-from insightai.infrastructure.governance.bootstrap import build_governance_components
 from insightai.infrastructure.semantic.bootstrap import build_semantic_components
 
 logger = get_logger(__name__)

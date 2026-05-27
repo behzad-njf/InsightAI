@@ -11,11 +11,14 @@ from insightai.domain.models.schema import (
     TableMetadata,
 )
 from insightai.domain.ports.schema_repository import ISchemaRepository
-from insightai.infrastructure.logging.setup import get_logger
 from insightai.infrastructure.config.settings import Settings, get_settings
+from insightai.infrastructure.logging.setup import get_logger
 from insightai.infrastructure.schema.context_builder_factory import create_schema_context_builder
 from insightai.infrastructure.schema.registry import SchemaRegistry
-from insightai.infrastructure.schema.schema_loader import load_schema_document, resolve_schema_cache_path
+from insightai.infrastructure.schema.schema_loader import (
+    load_schema_document,
+    resolve_schema_cache_path,
+)
 
 logger = get_logger(__name__)
 

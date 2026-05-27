@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from insightai.domain.exceptions import GovernanceDeniedError
-from insightai.domain.models.database import DatabaseKind
 from insightai.domain.models.governance import (
-    GovernancePolicyCatalog,
     GovernanceContext,
     GovernanceDecision,
+    GovernancePolicyCatalog,
     MissingAttributeAction,
     PolicyDecision,
     Principal,
@@ -17,6 +18,9 @@ from insightai.infrastructure.governance.policy_resolver import (
     resolve_row_filters,
 )
 from insightai.infrastructure.governance.sql_transform import transform_select_sql
+
+if TYPE_CHECKING:
+    from insightai.domain.models.database import DatabaseKind
 
 
 class SqlGovernanceEnforcer:

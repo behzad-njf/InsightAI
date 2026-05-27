@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from insightai.domain.exceptions import GovernancePolicyError
 from insightai.domain.models.governance import (
@@ -17,6 +16,9 @@ from insightai.infrastructure.governance.yaml_loader import (
     _parse_catalog,
     _read_yaml,
 )
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 _TOP_LEVEL_KEYS = frozenset(
     {
@@ -170,7 +172,8 @@ def _validate_roles(raw: object, *, source: str) -> list[str]:
             errors.append(f"{path}: allowed_tables must not be empty (use ['*'] for all)")
         scope_raw = role_value.get("apply_scope_dimensions", role_value.get("apply_scope"))
         if scope_raw is not None:
-            errors.extend(_validate_string_or_list(scope_raw, path=f"{path}.apply_scope_dimensions"))
+            scope_path = f"{path}.apply_scope_dimensions"
+            errors.extend(_validate_string_or_list(scope_raw, path=scope_path))
         masks = role_value.get("column_masks")
         if masks is not None:
             if not isinstance(masks, list):
@@ -242,13 +245,16 @@ def _validate_catalog_semantics(catalog: GovernancePolicyCatalog) -> list[str]:
 
     for dim_id, dimension in catalog.scope_dimensions.items():
         if not dimension.sql_bindings:
-            errors.append(f"scope_dimensions.{dim_id}: sql_bindings must contain at least one binding")
+            errors.append(
+                f"scope_dimensions.{dim_id}: sql_bindings must contain at least one binding"
+            )
 
     for role_name, role in catalog.roles.items():
         for dim_id in role.apply_scope_dimensions:
             if dim_id not in known_dimensions:
                 errors.append(
-                    f"roles.{role_name}: apply_scope_dimensions references unknown dimension {dim_id!r}",
+                    f"roles.{role_name}: apply_scope_dimensions references "
+                    f"unknown dimension {dim_id!r}",
                 )
             else:
                 bound = catalog.scope_dimensions[dim_id]
@@ -264,7 +270,9 @@ def _validate_catalog_semantics(catalog: GovernancePolicyCatalog) -> list[str]:
         for mask in role.column_masks:
             key = mask.column.lower()
             if key in seen_masks:
-                errors.append(f"roles.{role_name}: duplicate column_masks entry for {mask.column!r}")
+                errors.append(
+                    f"roles.{role_name}: duplicate column_masks entry for {mask.column!r}"
+                )
             seen_masks.add(key)
 
     return errors

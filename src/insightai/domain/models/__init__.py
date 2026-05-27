@@ -1,5 +1,13 @@
 """Domain models — export public types."""
 
+from insightai.domain.models.database import (
+    DatabaseConnectionConfig,
+    DatabaseHealthStatus,
+    DatabaseKind,
+    QueryColumn,
+    QueryExecutionOptions,
+    QueryResult,
+)
 from insightai.domain.models.explainability import (
     ExplainabilityBuildRequest,
     ExplainabilityGovernanceSummary,
@@ -11,14 +19,6 @@ from insightai.domain.models.explainability import (
     RAGExplainabilityCitation,
     SchemaTableExclusion,
     SchemaTableSelection,
-)
-from insightai.domain.models.database import (
-    DatabaseConnectionConfig,
-    DatabaseHealthStatus,
-    DatabaseKind,
-    QueryColumn,
-    QueryExecutionOptions,
-    QueryResult,
 )
 from insightai.domain.models.llm import (
     AIFrameworkKind,

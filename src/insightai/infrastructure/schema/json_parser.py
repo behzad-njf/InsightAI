@@ -56,7 +56,7 @@ class SchemaJsonParser:
         document: SchemaDocument,
         examples_path: Path,
     ) -> SchemaDocument:
-        """Attach query examples from ``export_schema_examples`` when not embedded in schema.json."""
+        """Attach examples from ``export_schema_examples`` when not in schema.json."""
         data = json.loads(examples_path.read_text(encoding="utf-8"))
         if data.get("examples_version") != 1:
             msg = f"Unsupported examples_version {data.get('examples_version')!r}"

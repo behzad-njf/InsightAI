@@ -19,10 +19,13 @@ from insightai.domain.models.ask import (
 from insightai.domain.models.database import QueryResult
 from insightai.domain.models.explainability import ExplainabilityBuildRequest
 from insightai.domain.models.hybrid import QueryRouteKind
-from insightai.domain.models.query_execution import RunQueryRequest, RunQueryResult, RunQuerySQLSource
+from insightai.domain.models.query_execution import (
+    RunQueryRequest,
+    RunQueryResult,
+    RunQuerySQLSource,
+)
 from insightai.domain.models.sql import SQLStatementKind, SQLValidationResult
 from insightai.domain.models.sql_generation import GenerateSQLRequest, GenerateSQLResult
-from insightai.domain.ports.explainability_builder import IExplainabilityBuilder
 from insightai.infrastructure.config.settings import Settings, get_settings
 from insightai.infrastructure.explainability.builder import ExplainabilityBuilder
 from insightai.infrastructure.logging.setup import get_logger
@@ -37,11 +40,12 @@ from insightai.infrastructure.observability.tracing import start_span
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
+    from insightai.application.pipeline.governed_sql import GovernedSQLPreparation
     from insightai.application.use_cases.generate_answer import GenerateAnswerUseCase
     from insightai.application.use_cases.generate_sql import GenerateSQLUseCase
     from insightai.application.use_cases.run_query import RunQueryUseCase
-    from insightai.application.pipeline.governed_sql import GovernedSQLPreparation
     from insightai.domain.ports.audit_logger import IAuditLogger
+    from insightai.domain.ports.explainability_builder import IExplainabilityBuilder
     from insightai.domain.ports.governance import IGovernanceEnforcer
     from insightai.domain.ports.sql_safety import ISQLSafetyValidator
 

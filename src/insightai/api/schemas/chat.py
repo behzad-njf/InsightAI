@@ -7,8 +7,8 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from insightai.api.schemas.explainability import ExplainabilitySchema
-from insightai.domain.models.ask import AskMode, AskRequest as DomainAskRequest
-from insightai.domain.models.ask import AskResult, AskStreamEvent
+from insightai.domain.models.ask import AskMode, AskResult, AskStreamEvent
+from insightai.domain.models.ask import AskRequest as DomainAskRequest
 from insightai.domain.models.hybrid import QueryRouteKind
 from insightai.infrastructure.logging.setup import request_id_var
 

@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 from insightai.cli.semantic import main_test_match, main_validate, validate_semantic_catalog
 from insightai.domain.models.database import DatabaseKind
 

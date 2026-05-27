@@ -92,8 +92,8 @@ roles:
 
 
 def test_bootstrap_raises_on_invalid_policy(tmp_path: Path) -> None:
-    from insightai.infrastructure.config.settings import Settings
     from insightai.domain.models.database import DatabaseKind
+    from insightai.infrastructure.config.settings import Settings
 
     (tmp_path / "policies.yaml").write_text("enabled: true\nroles: {}\n", encoding="utf-8")
     settings = Settings(

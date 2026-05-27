@@ -73,7 +73,7 @@ def governance_ask_client(
         governance_path=GOVERNANCE_FIXTURE,
     )
     catalog = YamlGovernancePolicyLoader(GOVERNANCE_FIXTURE).load()
-    enforcer = SqlGovernanceEnforcer(catalog, database_kind=settings.database_kind)
+    SqlGovernanceEnforcer(catalog, database_kind=settings.database_kind)
     db_components = build_database_components(settings)
 
     mock_framework = MagicMock()
@@ -87,13 +87,10 @@ def governance_ask_client(
         ),
     )
 
-    from insightai.domain.models.answer import AnswerGenerationResult, GenerateAnswerResult
-    from insightai.domain.models.database import QueryResult
+    from insightai.domain.models.answer import AnswerGenerationResult as AnswerPart
     from insightai.infrastructure.ai.factory import AIComponents
     from insightai.infrastructure.ai.sql_generator import LLMSQLGenerator
     from insightai.infrastructure.prompts.loader import load_sql_generation_prompts
-
-    from insightai.domain.models.answer import AnswerGenerationResult as AnswerPart
 
     answer_generator = MagicMock()
     answer_generator.generate = AsyncMock(

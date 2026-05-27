@@ -3,15 +3,18 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from insightai.domain.exceptions import ConfigurationError, GovernancePolicyError
-from insightai.domain.ports.governance import IGovernanceEnforcer
 from insightai.infrastructure.config.settings import Settings, get_settings
 from insightai.infrastructure.governance.enforcer import SqlGovernanceEnforcer
 from insightai.infrastructure.governance.noop_enforcer import NoOpGovernanceEnforcer
 from insightai.infrastructure.governance.validator import validate_governance_catalog
 from insightai.infrastructure.governance.yaml_loader import YamlGovernancePolicyLoader
 from insightai.infrastructure.logging.setup import get_logger
+
+if TYPE_CHECKING:
+    from insightai.domain.ports.governance import IGovernanceEnforcer
 
 logger = get_logger(__name__)
 

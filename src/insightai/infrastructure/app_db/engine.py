@@ -25,10 +25,7 @@ def ensure_sqlite_parent_dir(url: str) -> None:
         return
     # sqlite:////absolute/path or sqlite:///relative/path
     path_part = url.split("sqlite:///", 1)[-1]
-    if path_part.startswith("/"):
-        db_path = Path(path_part)
-    else:
-        db_path = Path(path_part)
+    db_path = Path(path_part) if path_part.startswith("/") else Path(path_part)
     if db_path.suffix in {".db", ".sqlite", ".sqlite3"}:
         db_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -42,8 +39,7 @@ def create_app_database_engine(settings: Settings) -> Engine:
         "pool_pre_ping": True,
         "echo": settings.debug,
     }
-    if kind and kind.value == "sqlite":
-        if ":memory:" in url:
-            engine_kwargs["connect_args"] = {"check_same_thread": False}
-            engine_kwargs["poolclass"] = StaticPool
+    if kind and kind.value == "sqlite" and ":memory:" in url:
+        engine_kwargs["connect_args"] = {"check_same_thread": False}
+        engine_kwargs["poolclass"] = StaticPool
     return create_engine(url, **engine_kwargs)

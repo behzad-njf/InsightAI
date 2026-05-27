@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from insightai.domain.exceptions import PromptNotFoundError
-from insightai.infrastructure.config.settings import Settings, get_settings
+from insightai.infrastructure.config.settings import Settings
 from insightai.infrastructure.prompts.loader import _read_prompt_file, prompts_root
 
 _RAG_DIR = "rag"

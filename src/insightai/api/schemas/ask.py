@@ -8,8 +8,8 @@ from pydantic import BaseModel, Field
 
 from insightai.api.schemas.explainability import ExplainabilitySchema
 from insightai.api.schemas.llm import TokenUsageSchema
-from insightai.domain.models.ask import AskMode, AskRequest as DomainAskRequest
-from insightai.domain.models.ask import AskResult
+from insightai.domain.models.ask import AskMode, AskResult
+from insightai.domain.models.ask import AskRequest as DomainAskRequest
 from insightai.domain.models.database import DatabaseKind
 from insightai.domain.models.hybrid import QueryRouteKind
 

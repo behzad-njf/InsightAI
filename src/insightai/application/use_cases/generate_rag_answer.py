@@ -9,12 +9,12 @@ from insightai.domain.models.answer import (
     GenerateAnswerResult,
     GenerateAnswerStreamChunk,
 )
-from insightai.domain.models.hybrid import RAGRetrievalResult
 from insightai.infrastructure.rag.citations import enrich_generate_answer_result
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
+    from insightai.domain.models.hybrid import RAGRetrievalResult
     from insightai.domain.ports.rag_answer_generator import IRAGAnswerGenerator
 
 
@@ -68,8 +68,9 @@ def _to_generate_answer_result(
     question: str,
     answer: AnswerGenerationResult,
 ) -> GenerateAnswerResult:
-    from insightai.domain.models.database import QueryColumn, QueryResult
     from datetime import UTC, datetime
+
+    from insightai.domain.models.database import QueryColumn, QueryResult
 
     empty_result = QueryResult(
         columns=[QueryColumn(name="_rag")],
