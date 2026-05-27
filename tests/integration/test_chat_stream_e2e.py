@@ -134,6 +134,8 @@ def test_stream_status_phases_in_order(product_chat_client_auth) -> None:
     status_phases = [data["phase"] for name, data in events if name == "status"]
     assert status_phases == [
         "generating_sql",
+        "applying_governance",
+        "validating_sql",
         "executing_query",
         "generating_answer",
     ]

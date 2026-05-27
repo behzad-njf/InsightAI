@@ -5,6 +5,7 @@ from __future__ import annotations
 pytest_plugins = ["tests.integration.chat_product_fixtures"]
 
 from collections.abc import Generator
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -14,6 +15,13 @@ from fastapi.testclient import TestClient
 from insightai.domain.exceptions import ConfigurationError
 from insightai.domain.models.database import DatabaseHealthStatus, DatabaseKind
 from insightai.infrastructure.config.settings import Settings, clear_settings_cache
+
+_SCHEMA_FIXTURE_JSON = (
+    Path(__file__).resolve().parent / "fixtures" / "schema" / "django_doc_mini.json"
+)
+_SCHEMA_FIXTURE_MD = (
+    Path(__file__).resolve().parent / "fixtures" / "schema" / "django_doc_mini.md"
+)
 
 
 def make_settings(**overrides: Any) -> Settings:
@@ -37,7 +45,13 @@ def mock_governance_components() -> MagicMock:
 
 
 @pytest.fixture(autouse=True)
-def _reset_settings_cache() -> Generator[None, None, None]:
+def _reset_settings_cache(monkeypatch: pytest.MonkeyPatch) -> Generator[None, None, None]:
+    """Point schema loading at committed mini fixtures (CI has no customer schema export)."""
+    if _SCHEMA_FIXTURE_JSON.is_file():
+        monkeypatch.setenv("INSIGHTAI_SCHEMA_JSON_PATH", str(_SCHEMA_FIXTURE_JSON))
+    if _SCHEMA_FIXTURE_MD.is_file():
+        monkeypatch.setenv("INSIGHTAI_SCHEMA_MARKDOWN_PATH", str(_SCHEMA_FIXTURE_MD))
+    monkeypatch.setenv("INSIGHTAI_SCHEMA_SOURCE", "auto")
     clear_settings_cache()
     yield
     clear_settings_cache()

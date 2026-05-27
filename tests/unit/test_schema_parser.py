@@ -20,8 +20,7 @@ from tests.conftest import make_settings
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "schema"
 DJANGO_JSON = FIXTURES / "django_doc_mini.json"
 DJANGO_MD = FIXTURES / "django_doc_mini.md"
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-LEGACY_SCHEMA_PATH = PROJECT_ROOT / "schema" / "database_schema.md"
+LEGACY_SCHEMA_PATH = FIXTURES / "legacy_campus_mini.md"
 
 
 @pytest.fixture
@@ -92,9 +91,9 @@ def test_load_schema_document_prefers_json(tmp_path: Path) -> None:
     assert document.table_count == 3
 
 
-@pytest.mark.skipif(not LEGACY_SCHEMA_PATH.is_file(), reason="legacy campus schema not in tree")
 def test_legacy_campus_schema_still_parses() -> None:
     document = SchemaMarkdownParser().parse_file(LEGACY_SCHEMA_PATH)
     assert document.format == "legacy_markdown"
-    assert len(document.tables) >= 200
+    assert len(document.tables) >= 3
     assert len(document.join_patterns) >= 1
+    assert "accounts_user" in {t.name for t in document.tables}

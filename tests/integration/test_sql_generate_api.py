@@ -88,7 +88,8 @@ def test_sql_generate_success(sql_generate_client: TestClient) -> None:
     assert "school_classroomchild" in data["sql"]
     assert data["confidence"] == "high"
     assert data["usage"]["total_tokens"] == 80
-    assert "accounts_user" in data["schema_table_names"]
+    assert "demo_orders" in data["schema_table_names"]
+    assert "demo_customers" in data["schema_table_names"]
     assert len(data["context_markdown"]) > 0
 
 

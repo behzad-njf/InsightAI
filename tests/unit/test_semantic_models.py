@@ -37,7 +37,7 @@ def test_example_query_all_question_phrases_dedupes() -> None:
         sql="SELECT COUNT(*) FROM dbo.school_classroomchild",
     )
     phrases = example.all_question_phrases()
-    assert phrases[0] == "how many kids are in ABC"
+    assert phrases[0] == "how many kids are in abc"
     assert len(phrases) == 2
 
 

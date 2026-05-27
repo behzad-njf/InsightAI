@@ -11,6 +11,15 @@ python manage.py export_schema_json -o schema.json
 python manage.py export_schema_examples -o schema_examples.json   # optional
 ```
 
+## Default files in this repo (CI / local dev)
+
+The repository ships a **small anonymized demo schema** so tests and `uvicorn` work without a customer export:
+
+- `schema/schema.json`
+- `schema/database_schema.md`
+
+Replace these with your django-db-schema-doc exports for a real deployment.
+
 ## Copy into InsightAI
 
 | django-db-schema-doc output | InsightAI path (default) |

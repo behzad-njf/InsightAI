@@ -7,27 +7,25 @@ why, how SQL was produced, validation/governance outcomes, and citation alignmen
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import TYPE_CHECKING, Self
+from typing import Self
 
 from pydantic import BaseModel, Field, computed_field, field_validator
 
+from insightai.domain.models.governance import GovernanceDecision
 from insightai.domain.models.hybrid import (
     QueryRouteKind,
     RAGRetrievalResult,
     RAGSourceCitation,
     RouteClassification,
 )
+from insightai.domain.models.schema import SchemaContextResult
 from insightai.domain.models.semantic import (
     GenerationSource,
     TrustedAssetKind,
     TrustedMatchConfidence,
 )
-
-if TYPE_CHECKING:
-    from insightai.domain.models.governance import GovernanceDecision
-    from insightai.domain.models.schema import SchemaContextResult
-    from insightai.domain.models.sql import SQLValidationResult
-    from insightai.domain.models.sql_generation import SQLGenerationResult
+from insightai.domain.models.sql import SQLValidationResult
+from insightai.domain.models.sql_generation import SQLGenerationResult
 
 
 class ExplainabilityWarningSeverity(StrEnum):
