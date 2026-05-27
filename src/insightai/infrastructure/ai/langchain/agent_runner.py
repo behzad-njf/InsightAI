@@ -16,6 +16,8 @@ from insightai.infrastructure.config.settings import Settings, get_settings
 from insightai.infrastructure.logging.setup import get_logger
 
 if TYPE_CHECKING:
+    from langchain_core.language_models.chat_models import BaseChatModel
+
     from insightai.application.use_cases.generate_sql import GenerateSQLUseCase
     from insightai.application.use_cases.retrieve_rag_context import RetrieveRAGContextUseCase
     from insightai.application.use_cases.run_query import RunQueryUseCase
@@ -114,7 +116,7 @@ class LangChainAgentRunner(ILangChainAgentRunner):
         msg = "LangChain agent returned no assistant message."
         raise AIFrameworkError(msg)
 
-    def _build_chat_model(self) -> object:
+    def _build_chat_model(self) -> BaseChatModel:
         from langchain_openai import ChatOpenAI
 
         if self._settings.llm_provider == LLMProviderKind.GROQ:

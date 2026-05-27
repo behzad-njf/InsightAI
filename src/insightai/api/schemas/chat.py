@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from insightai.api.schemas.explainability import ExplainabilitySchema
 from insightai.domain.models.ask import AskMode, AskResult, AskStreamEvent
 from insightai.domain.models.ask import AskRequest as DomainAskRequest
-from insightai.domain.models.hybrid import QueryRouteKind
+from insightai.domain.models.hybrid import QueryRouteKind, RAGSourceCitation
 from insightai.infrastructure.logging.setup import request_id_var
 
 
@@ -93,7 +93,7 @@ class ChatTimingsSchema(BaseModel):
     total_ms: float
 
 
-def _resolve_answer_sources(result: AskResult) -> list:
+def _resolve_answer_sources(result: AskResult) -> list[RAGSourceCitation]:
     if result.answer.sources:
         return list(result.answer.sources)
     if result.rag_retrieval is not None:

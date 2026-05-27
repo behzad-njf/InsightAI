@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from sqlglot import exp
 
@@ -99,11 +99,13 @@ def apply_row_filters(
             )
         if not extra_conditions:
             continue
-        combined = extra_conditions[0]
+        combined: exp.Expression = extra_conditions[0]
         for cond in extra_conditions[1:]:
-            combined = exp.and_(combined, cond)
+            combined = cast("exp.Expression", exp.and_(combined, cond))
         existing = select.args.get("where")
-        merged = exp.and_(existing, combined) if existing else combined
+        merged: exp.Expression = (
+            cast("exp.Expression", exp.and_(existing, combined)) if existing else combined
+        )
         select.set("where", exp.Where(this=merged))
     return expression
 
@@ -145,12 +147,17 @@ def apply_column_masks(
                 continue
             if rule.strategy == ColumnMaskStrategy.NULL_LITERAL:
                 alias = proj.alias if isinstance(proj, exp.Alias) else name
-                new_expressions.append(exp.alias_(exp.Null(), alias or name))
+                new_expressions.append(
+                    cast("exp.Expression", exp.alias_(exp.Null(), alias or name)),
+                )
                 continue
             if rule.strategy == ColumnMaskStrategy.HASH:
                 alias = proj.alias if isinstance(proj, exp.Alias) else name
                 new_expressions.append(
-                    exp.alias_(exp.Literal.string("***"), alias or name),
+                    cast(
+                        "exp.Expression",
+                        exp.alias_(exp.Literal.string("***"), alias or name),
+                    ),
                 )
                 continue
             new_expressions.append(proj)

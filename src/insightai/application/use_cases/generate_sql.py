@@ -14,9 +14,7 @@ from insightai.domain.models.sql_generation import (
 )
 
 # Always prepended to SQL domain context when Knowledge injection is enabled.
-_PINNED_SQL_KNOWLEDGE_FILES: tuple[str, ...] = (
-    "sql_never_guess_schema.md"
-)
+_PINNED_SQL_KNOWLEDGE_FILES: tuple[str, ...] = ("sql_never_guess_schema.md",)
 
 if TYPE_CHECKING:
     from insightai.application.use_cases.build_schema_context import BuildSchemaContextUseCase

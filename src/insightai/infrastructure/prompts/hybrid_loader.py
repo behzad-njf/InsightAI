@@ -8,11 +8,10 @@ from pathlib import Path
 from insightai.domain.models.database import QueryResult
 from insightai.domain.models.llm import LLMMessage, LLMRole
 from insightai.infrastructure.config.settings import Settings, get_settings
-from insightai.infrastructure.prompts.loader import (
-    _read_prompt_file,
+from insightai.infrastructure.prompts.loader import _read_prompt_file, prompts_root
+from insightai.infrastructure.prompts.result_format import (
     column_names_list,
     format_query_result_for_prompt,
-    prompts_root,
 )
 
 _HYBRID_DIR = "hybrid"

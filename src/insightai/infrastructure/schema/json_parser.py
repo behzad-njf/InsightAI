@@ -140,7 +140,7 @@ class SchemaJsonParser:
         ranked = sorted(in_degree.items(), key=lambda item: (-item[1], item[0]))
         hub_names = [name for name, _ in ranked[:25]]
         row_by_name = {table.name.lower(): table.approx_row_count for table in tables}
-        hub_meta = {
+        hub_meta: dict[str, dict[str, object]] = {
             name: {
                 "incoming_fk_count": count,
                 "approx_row_count": row_by_name.get(name),

@@ -152,11 +152,10 @@ def parse_attributes_json(value: str | None) -> dict[str, list[str]]:
     if not isinstance(parsed, dict):
         msg = "attributes JSON must be an object"
         raise ValueError(msg)
-    return CreateApiKeyRequest(
-        label="validate",
-        roles=[],
-        attributes=parsed,  # type: ignore[arg-type]
-    ).attributes
+    request = CreateApiKeyRequest.model_validate(
+        {"label": "validate", "roles": [], "attributes": parsed},
+    )
+    return request.attributes
 
 
 def parse_attributes_arg(value: str | None) -> dict[str, list[str]]:

@@ -69,7 +69,7 @@ def build_langchain_tools(
         context.execution = execution
         table = format_query_result_for_prompt(
             execution.query_result,
-            max_rows=min(20, settings.answer_max_prompt_rows),
+            max_display_rows=min(20, settings.answer_max_prompt_rows),
         )
         logger.info(
             "langchain_tool_run_sql_analytics",

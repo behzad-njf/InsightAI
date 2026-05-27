@@ -3,15 +3,14 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING
+from datetime import (
+    datetime,  # noqa: TC003 — SQLAlchemy resolves Mapped[datetime] at class body runtime
+)
 
 from sqlalchemy import DateTime, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from insightai.infrastructure.app_db.base import AppBase
-
-if TYPE_CHECKING:
-    from datetime import datetime
 
 
 class ApiKeyRecord(AppBase):

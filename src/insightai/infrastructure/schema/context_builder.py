@@ -68,11 +68,11 @@ class SchemaContextBuilder:
         scores: dict[str, float] = {}
         reasons: dict[str, list[str]] = {}
 
-        for table in self._registry.list_tables():
-            score, table_reasons = self._score_table(table, tokens, question)
+        for listed_table in self._registry.list_tables():
+            score, table_reasons = self._score_table(listed_table, tokens, question)
             if score > 0:
-                scores[table.name] = score
-                reasons[table.name] = table_reasons
+                scores[listed_table.name] = score
+                reasons[listed_table.name] = table_reasons
 
         self._boost_hub_tables(scores, reasons)
         self._boost_domains_from_registry(tokens, scores, reasons)
@@ -92,12 +92,12 @@ class SchemaContextBuilder:
 
         selected_tables: list[SchemaTableContext] = []
         for name in selected_names:
-            table = self._registry.get_table(name)
-            if table is None:
+            resolved_table = self._registry.get_table(name)
+            if resolved_table is None:
                 continue
             selected_tables.append(
                 SchemaTableContext(
-                    table=table,
+                    table=resolved_table,
                     relevance_score=scores.get(name, 0.0),
                     match_reasons=reasons.get(name, []),
                 )

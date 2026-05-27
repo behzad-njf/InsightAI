@@ -37,7 +37,7 @@ def load_schema_document(settings: Settings | None = None) -> SchemaDocument:
         if json_path.is_file():
             document = SchemaJsonParser().parse_file(json_path)
             examples_path = settings.schema_examples_json_absolute
-            if examples_path.is_file():
+            if examples_path is not None and examples_path.is_file():
                 document = SchemaJsonParser().merge_examples_file(document, examples_path)
             return document
         if settings.schema_source == "json":

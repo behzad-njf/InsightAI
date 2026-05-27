@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import importlib
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol, cast
 
 from insightai.infrastructure.config.settings import Settings, get_settings
 from insightai.infrastructure.schema.context_builder import SchemaContextBuilder
@@ -13,14 +13,17 @@ if TYPE_CHECKING:
     from insightai.domain.models.schema import SchemaContextRequest, SchemaContextResult
 
 
-class ISchemaContextBuilder:
+class ISchemaContextBuilder(Protocol):
     """Minimal interface for default and plugin builders."""
 
-    def build(self, request: SchemaContextRequest) -> SchemaContextResult:
-        raise NotImplementedError
+    def build(self, request: SchemaContextRequest) -> SchemaContextResult: ...
 
 
-def _load_plugin_class(dotted_path: str) -> type[ISchemaContextBuilder]:
+class _SchemaContextBuilderFactory(Protocol):
+    def __call__(self, registry: SchemaRegistry) -> ISchemaContextBuilder: ...
+
+
+def _load_plugin_class(dotted_path: str) -> _SchemaContextBuilderFactory:
     """
     Load ``module.path:ClassName`` from ``INSIGHTAI_SCHEMA_CONTEXT_PLUGIN``.
 
@@ -38,7 +41,7 @@ def _load_plugin_class(dotted_path: str) -> type[ISchemaContextBuilder]:
     if not callable(plugin_cls):
         msg = f"Plugin class {class_name!r} is not callable"
         raise TypeError(msg)
-    return plugin_cls
+    return cast("_SchemaContextBuilderFactory", plugin_cls)
 
 
 def create_schema_context_builder(

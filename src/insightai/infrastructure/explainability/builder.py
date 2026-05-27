@@ -130,11 +130,11 @@ def _collect_warnings(
                     severity=ExplainabilityWarningSeverity.ERROR,
                 ),
             )
-        for warning in request.validation.warnings:
+        for validation_warning in request.validation.warnings:
             warnings.append(
                 ExplainabilityWarning(
                     code="SQL_VALIDATION",
-                    message=_sanitize_warning_message(warning),
+                    message=_sanitize_warning_message(validation_warning),
                     severity=ExplainabilityWarningSeverity.WARNING,
                 ),
             )
