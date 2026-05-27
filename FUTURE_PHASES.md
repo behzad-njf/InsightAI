@@ -2,7 +2,7 @@
 
 > **Purpose:** Roadmap for Phases **11–20** — enterprise capabilities for a **general-purpose** analytics platform (any business), inspired by production patterns (e.g. Genie-style analytics), without abandoning InsightAI’s clean architecture.  
 > **Deployment model:** **One instance = one customer / one business** (one schema, one readonly DB, one config set). The codebase stays industry-agnostic; each deployment customizes YAML/env — not multiple `projects/<id>/` inside a single running instance.  
-> **Status:** **Planning only** — implement after [AGENT_PHASES.md](AGENT_PHASES.md) Phases 1–10 and alongside [BRAIN_PHASES.md](BRAIN_PHASES.md).  
+> **Status:** Phases **11–13** and **16** ✅ complete; Phases **14–15**, **17–19** planned; Phase **20** optional. Core baseline: [AGENT_PHASES.md](AGENT_PHASES.md) Phases 1–10.  
 > **Companion docs:** [AGENT.md](AGENT.md), [README.md](README.md), [BRAIN_PHASES.md](BRAIN_PHASES.md), [SECURITY.md](SECURITY.md)
 
 ---
@@ -93,7 +93,7 @@ flowchart TB
     end
     subgraph response [Response Phases 6 13-14]
         SUM[Summary + chart]
-        EXP[Explainability]
+        EXP[Explainability payload]
     end
     API --> AUTH
     AUTH --> CTX
@@ -116,11 +116,13 @@ Do **not** re-implement these in future phases; **extend** them.
 |-----|--------|--------|
 | [AGENT_PHASES.md](AGENT_PHASES.md) | Phases **1–10** — foundation through hybrid RAG | Core product ✅ |
 | [BRAIN_PHASES.md](BRAIN_PHASES.md) | Knowledge + global **lessons** | A in practice; B–D planned |
+| Schema (django-db-schema-doc) | `schema.json` / `DATABASE.md` + schema-driven context builder | ✅ |
+| Explainability (Phase 13) | Payload + API `explainability` on chat/ask | ✅ |
 
 | Capability | Phase |
 |------------|-------|
 | Clean architecture, FastAPI `/api/v1`, Docker | 1 |
-| Schema markdown → context retrieval | 2 |
+| Schema (markdown / `schema.json` via django-db-schema-doc) → context retrieval | 2 |
 | NL → SQL (Groq / OpenAI / OpenRouter) | 3 |
 | sqlglot + composite read-only validation | 4 |
 | Readonly execution, row cap, timeout, MSSQL/PG/SQLite | 5 |
@@ -132,7 +134,7 @@ Do **not** re-implement these in future phases; **extend** them.
 
 **MVP platform path (historical):** `1 → 2 → 3 → 4 → 5 → 6 → 7` then `8 → 9 → 10`.
 
-**Global platform path (this doc):** `11 → 12 → 13` (trust + policy + transparency), then `14 → 15 → 16` (product + auth), then `17 → 18` (quality + ops), then `19` (catalog), optional `20` (UI).
+**Global platform path (this doc):** `11 → 16 → 12 → 13` ✅ (trust + auth + policy + transparency); next `14 → 15` (charts + LLM router), then `17 → 18` (quality + ops), then `19` (catalog), optional `20` (UI).
 
 ---
 
@@ -145,7 +147,7 @@ Apply to **every** future phase:
 1. **Hexagonal layout** — new behavior starts in `domain/` (models + ports), then `application/use_cases/`, then `infrastructure/`, then `api/v1/routes/`.
 2. **One deployable API** — new surfaces are routers under `/api/v1/`, not new top-level `api/*.py` apps.
 3. **Configuration as data** — instance-level YAML under `config/` (semantic, governance, LLM routes); secrets stay in env. **No** `projects/<id>/` in a single deployment.
-4. **Schema source of truth** — `schema/database_schema.md` for this instance; catalog (Phase 19) indexes it, does not replace it.
+4. **Schema source of truth** — django-db-schema-doc export (`schema.json` and/or `DATABASE.md` under `schema/`); optional `context/plugins/` per deployment; catalog (Phase 19) indexes it, does not replace it.
 5. **Industry-agnostic governance** — scope dimensions and mask rules are **declared in YAML**, not hardcoded (e.g. `campus` is one customer’s dimension name, not a platform concept).
 6. **Prompts in `prompts/`** — versioned templates; no ad-hoc giant strings in routes.
 
@@ -181,12 +183,12 @@ Apply to **every** future phase:
 
 | Phase | Name | Status | Depends on | Outcome |
 |-------|------|--------|------------|---------|
-| **11** | Trusted semantic layer | 🟡 In progress | 2, 3, 4, 7 | Approved metrics & example SQL; match-based trust |
-| **12** | Governance & data policy | ⬜ Planned | 4, 5, 7, 16 | Configurable scope dimensions, PII masks, row filters |
-| **13** | Explainability & transparency | ⬜ Planned | 2, 3, 6, 7 | `why` payload: tables, reasons, warnings, follow-ups |
+| **11** | Trusted semantic layer | ✅ Complete | 2, 3, 4, 7 | Approved metrics & example SQL; match-based trust |
+| **12** | Governance & data policy | ✅ Complete | 4, 5, 7, 16 | Configurable scope dimensions, PII masks, row filters |
+| **13** | Explainability & transparency | ✅ Complete | 2, 3, 6, 7, 11, 12 | `why` payload: tables, reasons, warnings, citations |
 | **14** | Charts & structured results | ⬜ Planned | 5, 6, 7 | Chart recommendation + tabular payload contract |
 | **15** | Task-level LLM router & cost | ⬜ Planned | 1, 3, 8 | Per-task models, fallbacks, token budgets |
-| **16** | App database & API key auth | ⬜ Planned | 7, 8 | Hashed API keys, roles, principal attributes for governance |
+| **16** | App database & API key auth | ✅ Complete | 7, 8 | Hashed API keys, roles, principal attributes for governance |
 | **17** | Feedback, evals & quality loop | ⬜ Planned | 8, 10, 16, Brain B | `/feedback`, eval suites, curation → lessons |
 | **18** | SQL review, optimization & async jobs | ⬜ Planned | 5, 12, 16 | Review queue, cost gate, background query jobs |
 | **19** | Catalog, semantic spaces & lineage | ⬜ Planned | 2, 7 | Domain-scoped context, object metadata, lineage log |
@@ -326,47 +328,48 @@ roles:
 
 ### Dependencies
 
-- Phases 4, 5, 7 ✅; Phase **16** for API key → principal attributes (can stub principal in tests before 16 ships)
+- Phases 4, 5, 7, 16 ✅
 
 ---
 
 ## Phase 13 — Explainability & transparency
 
-**Status:** ⬜ Planned  
+**Status:** ✅ Complete — see `src/insightai/domain/models/explainability.py`, `src/insightai/infrastructure/explainability/builder.py`, API schemas in `src/insightai/api/schemas/explainability.py`
 
 ### Goal
 
-Every product answer can carry a machine-readable **“why”** for analysts and auditors.
+Every product answer can carry a machine-readable **“why”** for analysts and auditors: route, schema table picks, SQL generation source, validation/governance summaries, RAG citations, and sanitized warnings.
 
 ### Deliverables
 
 | # | Component | Description |
 |---|-----------|-------------|
-| 1 | `ExplainabilityPayload` model | Tables, join reasons, route, validation, warnings |
-| 2 | Schema selection reasons | Expose `context_builder` boost/exclude notes (sanitized) |
-| 3 | Follow-up suggestions | Optional LLM or heuristic `follow_up_questions[]` |
-| 4 | API | `include_explainability` on chat/ask (default true for debug role) |
-| 5 | SSE | Stream explainability before or with final answer |
+| 1 | `ExplainabilityPayload` + `IExplainabilityBuilder` | Domain model, port, default builder implementation |
+| 2 | Schema selection | `schema_selection`, `schema_selection_reasons`, `excluded_tables` from context builder |
+| 3 | Pipeline linkage | Wired in `AskUseCase` and `HybridAskUseCase`; returned on `AskResult` |
+| 4 | API exposure | `explainability` on `AskResponse`, `ChatResponse`, and SSE `done` payload |
+| 5 | Phase 11 / 12 linkage | `generation_source`, `trusted` block, `governance.policy_ids`, `policy_reason_code` |
+| 6 | Tests | Unit + integration tests; chat/ask API assertions |
 
 ### Proposed steps
 
-| Step | Task |
-|------|------|
-| 13.1 | Domain model + port `IExplainabilityBuilder` |
-| 13.2 | Implement from schema context + SQL gen + validation result |
-| 13.3 | Wire into `AskUseCase` / `HybridAskUseCase` |
-| 13.4 | Extend OpenAPI schemas; snapshot tests |
-| 13.5 | Link to Phase 11 `generation_source` and Phase 12 policy ids |
+| Step | Task | Status |
+|------|------|--------|
+| 13.1 | Domain model + port `IExplainabilityBuilder` | ✅ |
+| 13.2 | `ExplainabilityBuilder` from schema context + SQL gen + validation + governance | ✅ |
+| 13.3 | Wire into `AskUseCase` / `HybridAskUseCase` | ✅ |
+| 13.4 | OpenAPI schemas (`explainability.py`); integration tests | ✅ |
+| 13.5 | Link to Phase 11 `generation_source` and Phase 12 policy ids | ✅ |
 
 ### Acceptance criteria
 
-- [ ] Response includes `referenced_tables` and `schema_selection_reasons` for SQL path.
-- [ ] Validation issues appear in `warnings` without exposing raw stack traces.
-- [ ] RAG path includes citation indices aligned with answer text.
+- [x] Response includes `referenced_tables` and `schema_selection_reasons` for SQL path.
+- [x] Validation issues appear in `warnings` without exposing raw stack traces.
+- [x] RAG path includes citation indices aligned with answer text (`rag_citations`).
 
 ### Dependencies
 
-- Phases 2, 3, 6, 7, 10 ✅
+- Phases 2, 3, 6, 7, 10, 11, 12 ✅
 
 ---
 
@@ -656,12 +659,12 @@ Optional thin UI for demos and operators; **API remains the contract of record**
 
 ```text
 Phases 1–10 (complete baseline)
-    ├── Phase 16 (API key auth + app DB) — early for production APIs
-    │       └── Phase 12 (governance ← principal attributes)
+    ├── Phase 16 ✅ (API key auth + app DB)
+    │       └── Phase 12 ✅ (governance ← principal attributes)
     │               └── Phase 18 (review + jobs)
-    ├── Phase 11 (trusted + dry_run)
-    │       └── Phase 12 (governance)
-    ├── Phase 13 (explainability) — parallel after 11
+    ├── Phase 11 ✅ (trusted + dry_run)
+    │       └── Phase 12 ✅ (governance)
+    ├── Phase 13 ✅ (explainability)
     ├── Phase 14 (charts) — parallel after 6
     ├── Phase 15 (LLM router)
     ├── Phase 17 (feedback + evals + Brain B)
@@ -674,11 +677,11 @@ BRAIN_PHASES (A–D)
 
 **Recommended global platform sequence:**
 
-`11 → 16 → 12 → 13 → 14 → 15 → 17 → 18 → 19` → optional `20`
+`11 → 16 → 12 → 13` ✅ done · next: `14 → 15 → 17 → 18 → 19` → optional `20`
 
-**Note:** Phase **16** before **12** so governance can bind real API key principals (12 can use test principals until 16 lands).
+**Note:** Production governance uses API key principals with `attributes` (e.g. `campus_ids`); env-only keys remain supported via `INSIGHTAI_API_KEYS` when `INSIGHTAI_API_KEY_AUTH_SOURCE` allows.
 
-**Parallelizable:** 13 and 14 after 11; 15 after 11; Brain A continues throughout.
+**Parallelizable:** 14 after 6; 15 after 11; Brain A continues throughout.
 
 ---
 
@@ -703,10 +706,10 @@ When implementing with agents or step-by-step with maintainers:
 
 | Order | Phase | Rationale |
 |-------|-------|-----------|
-| 1 | **11** | Trust + dry_run — immediate value, low risk |
-| 2 | **16** | API key auth + app DB — foundation for governance and ops |
-| 3 | **12** | Configurable governance — production data scope |
-| 4 | **13** | Explainability — cheap, improves all clients |
+| 1 | **11** ✅ | Trust + dry_run — immediate value, low risk |
+| 2 | **16** ✅ | API key auth + app DB — foundation for governance and ops |
+| 3 | **12** ✅ | Configurable governance — production data scope |
+| 4 | **13** ✅ | Explainability — cheap, improves all clients |
 | 5 | **14** | Charts + deterministic summary — product completeness |
 | 6 | **15** | LLM router — cost control at scale |
 | 7 | **17** | Feedback + evals + Brain B — quality loop |
@@ -775,6 +778,8 @@ Not planned in Phases 11–20 (use external tools or separate repos):
 | 2026-05-19 | Phase 12 step 12.5 — principal attribute contract + JWT/keys wiring |
 | 2026-05-19 | Phase 12 step 12.6 — docs/GOVERNANCE.md + education example pack |
 | 2026-05-19 | Phase 12 step 12.7 — SECURITY.md governance checklist; Phase 12 complete |
+| 2026-05-27 | Phase 13 complete — domain, builder, Ask/Hybrid wiring, API schemas, Phase 11/12 linkage |
+| 2026-05-27 | Schema refactor — django-db-schema-doc JSON/markdown loader, generic `SchemaContextBuilder`, optional `context/plugins/`; §2 baseline + §4 overview updated |
 
 ---
 

@@ -6,6 +6,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from insightai.api.schemas.explainability import ExplainabilitySchema
 from insightai.api.schemas.llm import TokenUsageSchema
 from insightai.domain.models.ask import AskMode, AskRequest as DomainAskRequest
 from insightai.domain.models.ask import AskResult
@@ -111,6 +112,10 @@ class AskResponse(BaseModel):
     generation_source: str = "llm"
     trusted_asset_id: str | None = None
     trusted_match_confidence: str | None = None
+    explainability: ExplainabilitySchema | None = Field(
+        default=None,
+        description="Machine-readable why/trace payload (Phase 13).",
+    )
 
     @classmethod
     def from_domain(cls, result: AskResult) -> AskResponse:
@@ -176,4 +181,5 @@ class AskResponse(BaseModel):
                 if result.sql.sql.trusted_match_confidence is not None
                 else None
             ),
+            explainability=ExplainabilitySchema.from_ask_result(result),
         )

@@ -28,6 +28,14 @@ class AppEnvironment(StrEnum):
     PRODUCTION = "production"
 
 
+class SchemaSourceKind(StrEnum):
+    """How InsightAI loads customer schema metadata (django-db-schema-doc exports)."""
+
+    AUTO = "auto"
+    JSON = "json"
+    MARKDOWN = "markdown"
+
+
 class LogFormat(StrEnum):
     CONSOLE = "console"
     JSON = "json"
@@ -437,8 +445,25 @@ class Settings(BaseSettings):
         description="Include per-user scope in query result cache keys (recommended).",
     )
 
-    # --- Schema ---
+    # --- Schema (django-db-schema-doc: DATABASE.md, schema.json, schema_examples.json) ---
+    schema_source: SchemaSourceKind = Field(
+        default=SchemaSourceKind.AUTO,
+        description="auto: prefer schema.json when present; json|markdown force one source.",
+    )
     schema_markdown_path: Path = Path("schema/database_schema.md")
+    schema_json_path: Path = Path("schema/schema.json")
+    schema_examples_json_path: Path | None = Field(
+        default=Path("schema/schema_examples.json"),
+        description="Optional export_schema_examples JSON; merged when tables lack examples.",
+    )
+    schema_context_plugin: str | None = Field(
+        default=None,
+        description=(
+            "Optional module:class for extended context heuristics, e.g. "
+            "context.plugins.schema_context_extended:ExtendedSchemaContextBuilder. "
+            "Unset = built-in schema-driven SchemaContextBuilder."
+        ),
+    )
 
     # --- Trusted semantic layer (Phase 11) ---
     semantic_enabled: bool = Field(
@@ -476,6 +501,7 @@ class Settings(BaseSettings):
 
     @field_validator(
         "schema_markdown_path",
+        "schema_json_path",
         "rag_default_index_path",
         "rag_knowledge_path",
         "semantic_path",
@@ -484,6 +510,13 @@ class Settings(BaseSettings):
     )
     @classmethod
     def coerce_path_fields(cls, value: str | Path) -> Path:
+        return Path(value)
+
+    @field_validator("schema_examples_json_path", mode="before")
+    @classmethod
+    def coerce_optional_examples_path(cls, value: str | Path | None) -> Path | None:
+        if value is None or value == "":
+            return None
         return Path(value)
 
     @field_validator("embedding_provider", mode="before")
@@ -581,6 +614,29 @@ class Settings(BaseSettings):
         if path.is_absolute():
             return path
         return self.project_root / path
+
+    @property
+    def schema_json_absolute(self) -> Path:
+        path = self.schema_json_path
+        if path.is_absolute():
+            return path
+        return self.project_root / path
+
+    @property
+    def schema_examples_json_absolute(self) -> Path | None:
+        if self.schema_examples_json_path is None:
+            return None
+        path = self.schema_examples_json_path
+        if path.is_absolute():
+            return path
+        return self.project_root / path
+
+    def schema_uses_json(self) -> bool:
+        if self.schema_source == SchemaSourceKind.JSON:
+            return True
+        if self.schema_source == SchemaSourceKind.MARKDOWN:
+            return False
+        return self.schema_json_absolute.is_file()
 
     def get_active_llm_api_key(self) -> str:
         if self.llm_provider == LLMProviderKind.GROQ:

@@ -16,8 +16,10 @@ Knowledge/*
 !Knowledge/README.md
 !Knowledge/sql_never_guess_schema.md
 
-src/insightai/infrastructure/schema/context_builder.py
-tests/unit/test_schema_context.py
+# Optional deployment schema context plugins (customer-specific; keep examples)
+context/plugins/*
+!context/plugins/README.md
+!context/plugins/*.example
 
 # Credentials (never commit)
 *.pem

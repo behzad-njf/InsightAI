@@ -17,10 +17,14 @@ from insightai.domain.models.ask import (
     AskTimings,
 )
 from insightai.domain.models.database import QueryResult
+from insightai.domain.models.explainability import ExplainabilityBuildRequest
 from insightai.domain.models.hybrid import QueryRouteKind
 from insightai.domain.models.query_execution import RunQueryRequest, RunQueryResult, RunQuerySQLSource
+from insightai.domain.models.sql import SQLStatementKind, SQLValidationResult
 from insightai.domain.models.sql_generation import GenerateSQLRequest, GenerateSQLResult
+from insightai.domain.ports.explainability_builder import IExplainabilityBuilder
 from insightai.infrastructure.config.settings import Settings, get_settings
+from insightai.infrastructure.explainability.builder import ExplainabilityBuilder
 from insightai.infrastructure.logging.setup import get_logger
 from insightai.infrastructure.observability.ask_audit import (
     build_ask_audit_complete,
@@ -36,8 +40,8 @@ if TYPE_CHECKING:
     from insightai.application.use_cases.generate_answer import GenerateAnswerUseCase
     from insightai.application.use_cases.generate_sql import GenerateSQLUseCase
     from insightai.application.use_cases.run_query import RunQueryUseCase
-    from insightai.domain.ports.audit_logger import IAuditLogger
     from insightai.application.pipeline.governed_sql import GovernedSQLPreparation
+    from insightai.domain.ports.audit_logger import IAuditLogger
     from insightai.domain.ports.governance import IGovernanceEnforcer
     from insightai.domain.ports.sql_safety import ISQLSafetyValidator
 
@@ -66,6 +70,7 @@ class AskUseCase:
         audit: IAuditLogger | None = None,
         governance: IGovernanceEnforcer | None = None,
         sql_validator: ISQLSafetyValidator | None = None,
+        explainability: IExplainabilityBuilder | None = None,
     ) -> None:
         from insightai.infrastructure.governance.noop_enforcer import NoOpGovernanceEnforcer
 
@@ -76,6 +81,7 @@ class AskUseCase:
         self._audit = audit or NullAuditLogger()
         self._governance = governance or NoOpGovernanceEnforcer()
         self._sql_validator = sql_validator
+        self._explainability = explainability or ExplainabilityBuilder()
 
     async def execute(self, request: AskRequest) -> AskResult:
         try:
@@ -184,6 +190,18 @@ class AskUseCase:
             dry_run=dry_run,
             governance_context=request.governance_context,
             governance_decision=preparation.governance_decision,
+            explainability=self._explainability.build(
+                ExplainabilityBuildRequest(
+                    question=request.question,
+                    schema_context=preparation.sql_result.schema_context,
+                    sql_generation=preparation.sql_result.sql,
+                    validation=self._validation_for_explainability(preparation.validated_sql),
+                    governance=preparation.governance_decision,
+                    referenced_tables=list(preparation.sql_result.sql.tables_used),
+                    dry_run=dry_run,
+                    sql_executed=not dry_run,
+                ),
+            ),
         )
 
         logger.info(
@@ -309,6 +327,20 @@ class AskUseCase:
                             dry_run=dry_run,
                             governance_context=request.governance_context,
                             governance_decision=preparation.governance_decision,
+                            explainability=self._explainability.build(
+                                ExplainabilityBuildRequest(
+                                    question=request.question,
+                                    schema_context=preparation.sql_result.schema_context,
+                                    sql_generation=preparation.sql_result.sql,
+                                    validation=self._validation_for_explainability(
+                                        preparation.validated_sql,
+                                    ),
+                                    governance=preparation.governance_decision,
+                                    referenced_tables=list(preparation.sql_result.sql.tables_used),
+                                    dry_run=dry_run,
+                                    sql_executed=not dry_run,
+                                ),
+                            ),
                         )
                         logger.info(
                             "ask_pipeline_stream_complete",
@@ -394,6 +426,19 @@ class AskUseCase:
         if request.enforce_readonly is not None:
             return request.enforce_readonly
         return self._settings.sql_enforce_readonly
+
+    def _validation_for_explainability(self, sql: str) -> SQLValidationResult | None:
+        if self._sql_validator is None:
+            return None
+        try:
+            return self._sql_validator.validate(sql)
+        except Exception:
+            # Explainability payload is best-effort and must not block responses.
+            return SQLValidationResult(
+                is_valid=False,
+                statement_kind=SQLStatementKind.UNKNOWN,
+                violations=["Validation metadata unavailable."],
+            )
 
     def _prepare_governed_sql(
         self,

@@ -1,8 +1,19 @@
-"""Schema metadata models — parsed from schema/database_schema.md."""
+"""Schema metadata models — from markdown or django-db-schema-doc JSON exports."""
 
 from __future__ import annotations
 
 from pydantic import BaseModel, Field
+
+
+class QueryExampleMetadata(BaseModel):
+    """SQL or ORM example bundled with a table (django-db-schema-doc)."""
+
+    kind: str = Field(description="sql or orm")
+    title: str
+    code: str
+    related_tables: list[str] = Field(default_factory=list)
+
+    model_config = {"frozen": True}
 
 
 class ColumnMetadata(BaseModel):
@@ -31,15 +42,20 @@ class ForeignKeyMetadata(BaseModel):
 
 
 class TableMetadata(BaseModel):
-    """Single table in the CampusMetrics schema."""
+    """Single table in the customer database schema."""
 
     name: str
     schema_name: str = "dbo"
     domain: str | None = None
     primary_key: str | None = None
     description: str | None = None
+    django_model: str | None = Field(
+        default=None,
+        description="Django app_label.model_name when exported from django-db-schema-doc.",
+    )
     columns: list[ColumnMetadata] = Field(default_factory=list)
     foreign_keys: list[ForeignKeyMetadata] = Field(default_factory=list)
+    query_examples: list[QueryExampleMetadata] = Field(default_factory=list)
     incoming_fk_count: int | None = None
     approx_row_count: int | None = None
     is_hub: bool = False
@@ -75,6 +91,10 @@ class SchemaDocument(BaseModel):
     """Full parsed schema artifact."""
 
     source_path: str
+    format: str = Field(
+        default="legacy_markdown",
+        description="legacy_markdown | django_db_schema_doc_markdown | django_db_schema_doc_json",
+    )
     domains: list[DomainMetadata] = Field(default_factory=list)
     tables: list[TableMetadata] = Field(default_factory=list)
     join_patterns: list[JoinPatternMetadata] = Field(default_factory=list)

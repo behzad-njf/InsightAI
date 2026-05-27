@@ -11,6 +11,7 @@ from insightai.domain.models.answer import GenerateAnswerResult  # noqa: TC001
 from insightai.domain.models.database import DatabaseKind  # noqa: TC001
 from insightai.domain.models.hybrid import QueryRouteKind, RAGRetrievalResult  # noqa: TC001
 from insightai.domain.models.query_execution import RunQueryResult  # noqa: TC001
+from insightai.domain.models.explainability import ExplainabilityPayload  # noqa: TC001
 from insightai.domain.models.governance import (  # noqa: TC001
     GovernanceContext,
     GovernanceDecision,
@@ -103,6 +104,10 @@ class AskResult(BaseModel):
     governance_decision: GovernanceDecision | None = Field(
         default=None,
         description="Outcome of Phase 12 governance hook (Phase 12.4).",
+    )
+    explainability: ExplainabilityPayload | None = Field(
+        default=None,
+        description="Machine-readable why/trace payload (Phase 13).",
     )
 
     model_config = {"frozen": True}

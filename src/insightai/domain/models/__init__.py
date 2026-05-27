@@ -1,5 +1,17 @@
 """Domain models — export public types."""
 
+from insightai.domain.models.explainability import (
+    ExplainabilityBuildRequest,
+    ExplainabilityGovernanceSummary,
+    ExplainabilityPayload,
+    ExplainabilityTrustedSource,
+    ExplainabilityValidationSummary,
+    ExplainabilityWarning,
+    ExplainabilityWarningSeverity,
+    RAGExplainabilityCitation,
+    SchemaTableExclusion,
+    SchemaTableSelection,
+)
 from insightai.domain.models.database import (
     DatabaseConnectionConfig,
     DatabaseHealthStatus,
@@ -20,6 +32,7 @@ from insightai.domain.models.llm import (
     join_stream_text,
 )
 from insightai.domain.models.schema import (
+    QueryExampleMetadata,
     SchemaContextRequest,
     SchemaContextResult,
     SchemaDocument,
@@ -36,6 +49,16 @@ from insightai.domain.models.sql_generation import (
 )
 
 __all__ = [
+    "ExplainabilityBuildRequest",
+    "ExplainabilityGovernanceSummary",
+    "ExplainabilityPayload",
+    "ExplainabilityTrustedSource",
+    "ExplainabilityValidationSummary",
+    "ExplainabilityWarning",
+    "ExplainabilityWarningSeverity",
+    "RAGExplainabilityCitation",
+    "SchemaTableExclusion",
+    "SchemaTableSelection",
     "AIFrameworkKind",
     "DatabaseConnectionConfig",
     "DatabaseHealthStatus",
@@ -47,6 +70,7 @@ __all__ = [
     "LLMRole",
     "LLMStreamChunk",
     "join_stream_text",
+    "QueryExampleMetadata",
     "QueryColumn",
     "QueryExecutionOptions",
     "QueryResult",

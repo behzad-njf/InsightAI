@@ -12,18 +12,25 @@ from insightai.domain.models.schema import (
 )
 from insightai.domain.ports.schema_repository import ISchemaRepository
 from insightai.infrastructure.logging.setup import get_logger
-from insightai.infrastructure.schema.context_builder import SchemaContextBuilder
-from insightai.infrastructure.schema.markdown_parser import SchemaMarkdownParser
+from insightai.infrastructure.config.settings import Settings, get_settings
+from insightai.infrastructure.schema.context_builder_factory import create_schema_context_builder
 from insightai.infrastructure.schema.registry import SchemaRegistry
+from insightai.infrastructure.schema.schema_loader import load_schema_document, resolve_schema_cache_path
 
 logger = get_logger(__name__)
 
 
 class FileSchemaRepository(ISchemaRepository):
-    """Parse schema markdown on first access and cache in memory."""
+    """Load schema from django-db-schema-doc JSON and/or markdown on first access."""
 
-    def __init__(self, schema_path: Path) -> None:
-        self._schema_path = schema_path
+    def __init__(
+        self,
+        schema_path: Path | None = None,
+        *,
+        settings: Settings | None = None,
+    ) -> None:
+        self._settings = settings or get_settings()
+        self._schema_path = schema_path or resolve_schema_cache_path(self._settings)
         self._document: SchemaDocument | None = None
         self._registry: SchemaRegistry | None = None
 
@@ -60,18 +67,19 @@ class FileSchemaRepository(ISchemaRepository):
     def build_context(self, request: SchemaContextRequest) -> SchemaContextResult:
         self._ensure_loaded()
         assert self._registry is not None
-        return SchemaContextBuilder(self._registry).build(request)
+        builder = create_schema_context_builder(self._registry, self._settings)
+        return builder.build(request)
 
     def _ensure_loaded(self) -> None:
         if self._document is not None and self._registry is not None:
             return
-        parser = SchemaMarkdownParser()
-        document = parser.parse_file(self._schema_path)
+        document = load_schema_document(self._settings)
         self._document = document
         self._registry = SchemaRegistry(document)
         logger.info(
             "schema_loaded",
             path=str(self._schema_path),
+            format=document.format,
             table_count=document.table_count,
             domain_count=len(document.domains),
         )

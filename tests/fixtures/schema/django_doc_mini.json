@@ -1,0 +1,160 @@
+{
+  "schema_version": 1,
+  "database_alias": "default",
+  "generated_at": "2026-01-01T00:00:00+00:00",
+  "connection": {
+    "engine": "django.db.backends.sqlite3",
+    "vendor": "sqlite",
+    "database_name": "demo.sqlite3",
+    "host": "",
+    "port": ""
+  },
+  "summary": {
+    "table_count": 3,
+    "column_count": 8,
+    "fk_count": 2
+  },
+  "tables": [
+    {
+      "name": "demo_customers",
+      "schema": "dbo",
+      "primary_key": ["id"],
+      "row_count": 100,
+      "columns": [
+        {
+          "name": "id",
+          "type_display": "AutoField",
+          "nullable": false,
+          "default": null,
+          "ordinal": 1,
+          "is_primary_key": true
+        },
+        {
+          "name": "name",
+          "type_display": "CharField",
+          "nullable": false,
+          "default": null,
+          "ordinal": 2,
+          "is_primary_key": false
+        }
+      ],
+      "outgoing_fks": [],
+      "incoming_fks": [
+        {
+          "from_table": "demo_orders",
+          "from_column": "customer_id",
+          "to_table": "demo_customers",
+          "to_column": "id",
+          "constraint_name": "fk_orders_customer",
+          "on_delete": "",
+          "on_update": ""
+        }
+      ],
+      "indexes": [],
+      "django_model": {
+        "app_label": "demo",
+        "model_name": "customer",
+        "verbose_name": "customer",
+        "doc": "Sample customer entity for tests."
+      },
+      "query_examples": [
+        {
+          "kind": "sql",
+          "title": "Join demo_orders",
+          "code": "SELECT c.*, o.*\nFROM demo_customers AS c\nINNER JOIN demo_orders AS o ON o.customer_id = c.id;",
+          "related_tables": ["demo_orders"]
+        }
+      ]
+    },
+    {
+      "name": "demo_orders",
+      "schema": "dbo",
+      "primary_key": ["id"],
+      "row_count": 250,
+      "columns": [
+        {
+          "name": "id",
+          "type_display": "AutoField",
+          "nullable": false,
+          "default": null,
+          "ordinal": 1,
+          "is_primary_key": true
+        },
+        {
+          "name": "customer_id",
+          "type_display": "BigIntegerField",
+          "nullable": false,
+          "default": null,
+          "ordinal": 2,
+          "is_primary_key": false
+        },
+        {
+          "name": "total_cents",
+          "type_display": "IntegerField",
+          "nullable": false,
+          "default": null,
+          "ordinal": 3,
+          "is_primary_key": false
+        }
+      ],
+      "outgoing_fks": [
+        {
+          "from_table": "demo_orders",
+          "from_column": "customer_id",
+          "to_table": "demo_customers",
+          "to_column": "id",
+          "constraint_name": "fk_orders_customer",
+          "on_delete": "",
+          "on_update": ""
+        }
+      ],
+      "incoming_fks": [],
+      "indexes": []
+    },
+    {
+      "name": "demo_order_lines",
+      "schema": "dbo",
+      "primary_key": ["id"],
+      "row_count": 500,
+      "columns": [
+        {
+          "name": "id",
+          "type_display": "AutoField",
+          "nullable": false,
+          "default": null,
+          "ordinal": 1,
+          "is_primary_key": true
+        },
+        {
+          "name": "order_id",
+          "type_display": "BigIntegerField",
+          "nullable": false,
+          "default": null,
+          "ordinal": 2,
+          "is_primary_key": false
+        },
+        {
+          "name": "sku",
+          "type_display": "CharField",
+          "nullable": false,
+          "default": null,
+          "ordinal": 3,
+          "is_primary_key": false
+        }
+      ],
+      "outgoing_fks": [
+        {
+          "from_table": "demo_order_lines",
+          "from_column": "order_id",
+          "to_table": "demo_orders",
+          "to_column": "id",
+          "constraint_name": "fk_line_order",
+          "on_delete": "",
+          "on_update": ""
+        }
+      ],
+      "incoming_fks": [],
+      "indexes": []
+    }
+  ]
+}

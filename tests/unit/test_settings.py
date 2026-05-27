@@ -100,10 +100,34 @@ def test_model_dump_safe_redacts_secrets() -> None:
 def test_schema_path_resolves_relative_to_project_root() -> None:
     settings = _settings_without_dotenv(
         schema_markdown_path=Path("schema/database_schema.md"),
+        schema_json_path=Path("schema/schema.json"),
     )
     path = settings.schema_markdown_absolute
     assert path.name == "database_schema.md"
     assert path.parent.name == "schema"
+    assert settings.schema_json_absolute.name == "schema.json"
+
+
+def test_schema_uses_json_when_file_exists(tmp_path: Path) -> None:
+    json_file = tmp_path / "schema.json"
+    json_file.write_text("{}", encoding="utf-8")
+    settings = _settings_without_dotenv(
+        schema_source="auto",
+        schema_json_path=json_file,
+        schema_markdown_path=tmp_path / "missing.md",
+    )
+    assert settings.schema_uses_json() is True
+
+
+def test_schema_uses_markdown_when_json_missing(tmp_path: Path) -> None:
+    md_file = tmp_path / "doc.md"
+    md_file.write_text("# doc", encoding="utf-8")
+    settings = _settings_without_dotenv(
+        schema_source="auto",
+        schema_json_path=tmp_path / "missing.json",
+        schema_markdown_path=md_file,
+    )
+    assert settings.schema_uses_json() is False
 
 
 def test_sql_query_timeout_default() -> None:

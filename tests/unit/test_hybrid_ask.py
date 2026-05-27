@@ -18,6 +18,7 @@ from insightai.domain.models.answer import (
 )
 from insightai.domain.models.ask import AskRequest, AskResult, AskTimings
 from insightai.domain.models.database import QueryColumn, QueryResult
+from insightai.domain.models.explainability import ExplainabilityPayload
 from insightai.domain.models.hybrid import (
     QueryRouteKind,
     RAGRetrievalResult,
@@ -82,6 +83,10 @@ def hybrid_ask() -> HybridAskUseCase:
                 answer_generation_ms=3.0,
                 total_ms=6.0,
             ),
+            explainability=ExplainabilityPayload(
+                question="How many children?",
+                route=QueryRouteKind.SQL,
+            ),
         ),
     )
 
@@ -120,6 +125,8 @@ async def test_hybrid_ask_rag_route_skips_sql(hybrid_ask: HybridAskUseCase) -> N
     assert result.execution is None
     assert result.rag_retrieval is not None
     assert result.rag_retrieval.has_sources
+    assert result.explainability is not None
+    assert result.explainability.route == QueryRouteKind.RAG
     hybrid_ask._sql_ask.execute_sql_pipeline.assert_not_called()  # type: ignore[attr-defined]
     hybrid_ask._generate_rag_answer.execute.assert_awaited_once()  # type: ignore[attr-defined]
 
@@ -134,6 +141,8 @@ async def test_hybrid_ask_sql_route_delegates(hybrid_ask: HybridAskUseCase) -> N
     )
 
     assert result.route == QueryRouteKind.SQL
+    assert result.explainability is not None
+    assert result.explainability.route == QueryRouteKind.SQL
     hybrid_ask._sql_ask.execute_sql_pipeline.assert_awaited_once()  # type: ignore[attr-defined]
     hybrid_ask._retrieve_rag.execute.assert_not_awaited()  # type: ignore[attr-defined]
 
@@ -151,6 +160,8 @@ async def test_hybrid_ask_both_route_retrieves_and_runs_sql(hybrid_ask: HybridAs
     assert result.sql is not None
     assert result.execution is not None
     assert result.rag_retrieval is not None
+    assert result.explainability is not None
+    assert result.explainability.route == QueryRouteKind.BOTH
     hybrid_ask._sql_ask.execute_sql_pipeline.assert_awaited_once()  # type: ignore[attr-defined]
     hybrid_ask._retrieve_rag.execute.assert_awaited_once()  # type: ignore[attr-defined]
     hybrid_ask._generate_answer.execute.assert_awaited_once()  # type: ignore[attr-defined]

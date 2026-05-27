@@ -1,0 +1,22 @@
+"""
+Example optional schema context plugin.
+
+Copy to schema_context_mydeployment.py and set INSIGHTAI_SCHEMA_CONTEXT_PLUGIN.
+"""
+
+from __future__ import annotations
+
+from insightai.domain.models.schema import SchemaContextRequest, SchemaContextResult
+from insightai.infrastructure.schema.context_builder import SchemaContextBuilder
+from insightai.infrastructure.schema.registry import SchemaRegistry
+
+
+class MyContextBuilder:
+    """Delegate to the default builder, then adjust (subclass or wrap as needed)."""
+
+    def __init__(self, registry: SchemaRegistry) -> None:
+        self._registry = registry
+        self._default = SchemaContextBuilder(registry)
+
+    def build(self, request: SchemaContextRequest) -> SchemaContextResult:
+        return self._default.build(request)

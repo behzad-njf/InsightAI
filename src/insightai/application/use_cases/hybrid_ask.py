@@ -14,8 +14,11 @@ from insightai.domain.models.ask import (
     AskStreamPhase,
     AskTimings,
 )
-from insightai.domain.models.hybrid import QueryRouteKind
+from insightai.domain.models.explainability import ExplainabilityBuildRequest
+from insightai.domain.models.hybrid import QueryRouteKind, RouteClassification
+from insightai.domain.ports.explainability_builder import IExplainabilityBuilder
 from insightai.infrastructure.config.settings import Settings, get_settings
+from insightai.infrastructure.explainability.builder import ExplainabilityBuilder
 from insightai.infrastructure.logging.setup import get_logger
 from insightai.infrastructure.observability.ask_audit import (
     build_ask_audit_complete,
@@ -57,6 +60,7 @@ class HybridAskUseCase:
         *,
         settings: Settings | None = None,
         audit: IAuditLogger | None = None,
+        explainability: IExplainabilityBuilder | None = None,
     ) -> None:
         self._sql_ask = sql_ask
         self._classify_route = classify_route
@@ -65,6 +69,7 @@ class HybridAskUseCase:
         self._generate_answer = generate_answer
         self._settings = settings or get_settings()
         self._audit = audit or NullAuditLogger()
+        self._explainability = explainability or ExplainabilityBuilder()
 
     async def execute(self, request: AskRequest) -> AskResult:
         try:
@@ -97,7 +102,8 @@ class HybridAskUseCase:
             yield AskStreamEvent.status(AskStreamPhase.ROUTING)
             route_started = time.perf_counter()
             with start_span("insightai.ask.route_classification", attributes=stream_attrs):
-                route = self._resolve_route(request)
+                classification = self._resolve_route(request)
+                route = classification.route
             route_classification_ms = (time.perf_counter() - route_started) * 1000
 
             if route in (QueryRouteKind.RAG, QueryRouteKind.BOTH):
@@ -130,6 +136,7 @@ class HybridAskUseCase:
                         result = self._build_rag_result(
                             request,
                             route=route,
+                            classification=classification,
                             answer=chunk.result,
                             retrieval=retrieval,
                             timings=self._timings(
@@ -152,7 +159,7 @@ class HybridAskUseCase:
 
             if route == QueryRouteKind.SQL:
                 async for event in self._sql_ask.execute_stream(request):
-                    yield _with_route_metadata(event, route=route)
+                    yield _with_route_metadata(event, route=route, classification=classification)
                 return
 
             assert route == QueryRouteKind.BOTH
@@ -161,6 +168,7 @@ class HybridAskUseCase:
                 request,
                 retrieval=retrieval,
                 route=route,
+                classification=classification,
                 route_classification_ms=route_classification_ms,
                 rag_retrieval_ms=rag_retrieval_ms,
                 total_started=total_started,
@@ -181,13 +189,15 @@ class HybridAskUseCase:
             "insightai.ask.route_classification",
             attributes={"insightai.stream": stream},
         ):
-            route = self._resolve_route(request)
+            classification = self._resolve_route(request)
+            route = classification.route
         route_classification_ms = (time.perf_counter() - route_started) * 1000
 
         if route == QueryRouteKind.RAG:
             return await self._execute_rag_only(
                 request,
                 route=route,
+                classification=classification,
                 total_started=total_started,
                 route_classification_ms=route_classification_ms,
                 stream=stream,
@@ -195,9 +205,19 @@ class HybridAskUseCase:
 
         if route == QueryRouteKind.SQL:
             result = await self._sql_ask.execute_sql_pipeline(request, stream=stream)
+            explainability = result.explainability
+            if explainability is not None:
+                explainability = explainability.model_copy(
+                    update={
+                        "route": route,
+                        "route_rationale": classification.rationale,
+                        "route_confidence": classification.confidence,
+                    },
+                )
             return result.model_copy(
                 update={
                     "route": route,
+                    "explainability": explainability,
                     "timings": result.timings.model_copy(
                         update={"route_classification_ms": round(route_classification_ms, 2)},
                     ),
@@ -207,6 +227,7 @@ class HybridAskUseCase:
         return await self._execute_both(
             request,
             route=route,
+            classification=classification,
             total_started=total_started,
             route_classification_ms=route_classification_ms,
             stream=stream,
@@ -217,6 +238,7 @@ class HybridAskUseCase:
         request: AskRequest,
         *,
         route: QueryRouteKind,
+        classification: RouteClassification,
         total_started: float,
         route_classification_ms: float,
         stream: bool,
@@ -254,6 +276,7 @@ class HybridAskUseCase:
         result = self._build_rag_result(
             request,
             route=route,
+            classification=classification,
             answer=answer,
             retrieval=retrieval,
             timings=self._timings(
@@ -273,6 +296,7 @@ class HybridAskUseCase:
         request: AskRequest,
         *,
         route: QueryRouteKind,
+        classification: RouteClassification,
         total_started: float,
         route_classification_ms: float,
         stream: bool,
@@ -320,6 +344,21 @@ class HybridAskUseCase:
             answer=answer,
             rag_retrieval=retrieval,
             timings=timings,
+            explainability=self._explainability.build(
+                ExplainabilityBuildRequest(
+                    question=request.question,
+                    route=classification,
+                    schema_context=sql_result.sql.schema_context if sql_result.sql is not None else None,
+                    sql_generation=sql_result.sql.sql if sql_result.sql is not None else None,
+                    governance=sql_result.governance_decision,
+                    rag_retrieval=retrieval,
+                    referenced_tables=(
+                        list(sql_result.sql.sql.tables_used) if sql_result.sql is not None else []
+                    ),
+                    dry_run=sql_result.dry_run,
+                    sql_executed=not sql_result.dry_run,
+                ),
+            ),
         )
         self._audit.log_ask_complete(
             build_ask_audit_complete(result, self._settings, stream=stream),
@@ -332,6 +371,7 @@ class HybridAskUseCase:
         *,
         retrieval: object,
         route: QueryRouteKind,
+        classification: RouteClassification,
         route_classification_ms: float,
         rag_retrieval_ms: float,
         total_started: float,
@@ -390,6 +430,29 @@ class HybridAskUseCase:
                             answer=enriched_answer,
                             rag_retrieval=retrieval,
                             timings=timings,
+                            explainability=self._explainability.build(
+                                ExplainabilityBuildRequest(
+                                    question=request.question,
+                                    route=classification,
+                                    schema_context=(
+                                        sql_result.sql.schema_context
+                                        if sql_result.sql is not None
+                                        else None
+                                    ),
+                                    sql_generation=(
+                                        sql_result.sql.sql if sql_result.sql is not None else None
+                                    ),
+                                    governance=sql_result.governance_decision,
+                                    rag_retrieval=retrieval,
+                                    referenced_tables=(
+                                        list(sql_result.sql.sql.tables_used)
+                                        if sql_result.sql is not None
+                                        else []
+                                    ),
+                                    dry_run=sql_result.dry_run,
+                                    sql_executed=not sql_result.dry_run,
+                                ),
+                            ),
                         )
                         self._audit.log_ask_complete(
                             build_ask_audit_complete(
@@ -406,7 +469,7 @@ class HybridAskUseCase:
                 )
                 return
 
-    def _resolve_route(self, request: AskRequest) -> QueryRouteKind:
+    def _resolve_route(self, request: AskRequest) -> RouteClassification:
         classification = self._classify_route.execute(
             request.question,
             requested_route=request.route,
@@ -419,13 +482,14 @@ class HybridAskUseCase:
             sql_signals=classification.sql_signals,
             rag_signals=classification.rag_signals,
         )
-        return route
+        return classification
 
     def _build_rag_result(
         self,
         request: AskRequest,
         *,
         route: QueryRouteKind,
+        classification: RouteClassification,
         answer: object,
         retrieval: object,
         timings: AskTimings,
@@ -441,6 +505,15 @@ class HybridAskUseCase:
             answer=answer,
             rag_retrieval=retrieval,
             timings=timings,
+            explainability=self._explainability.build(
+                ExplainabilityBuildRequest(
+                    question=request.question,
+                    route=classification,
+                    rag_retrieval=retrieval,
+                    dry_run=False,
+                    sql_executed=False,
+                ),
+            ),
         )
 
     def _timings(
@@ -482,9 +555,23 @@ class HybridAskUseCase:
         )
 
 
-def _with_route_metadata(event: AskStreamEvent, *, route: QueryRouteKind) -> AskStreamEvent:
+def _with_route_metadata(
+    event: AskStreamEvent,
+    *,
+    route: QueryRouteKind,
+    classification: RouteClassification,
+) -> AskStreamEvent:
     if event.kind != "done" or event.result is None:
         return event
+    explainability = event.result.explainability
+    if explainability is not None:
+        explainability = explainability.model_copy(
+            update={
+                "route": route,
+                "route_rationale": classification.rationale,
+                "route_confidence": classification.confidence,
+            },
+        )
     return AskStreamEvent.done(
-        event.result.model_copy(update={"route": route}),
+        event.result.model_copy(update={"route": route, "explainability": explainability}),
     )

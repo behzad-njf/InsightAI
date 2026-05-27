@@ -36,7 +36,9 @@ class BuildSchemaContextUseCase:
         self._repository = schema_repository
         self._settings = settings or get_settings()
         self._cache = cache
-        self._schema_path = schema_path or self._settings.schema_markdown_absolute
+        from insightai.infrastructure.schema.schema_loader import resolve_schema_cache_path
+
+        self._schema_path = schema_path or resolve_schema_cache_path(self._settings)
 
     async def execute(
         self,

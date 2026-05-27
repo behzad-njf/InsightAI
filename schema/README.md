@@ -1,27 +1,52 @@
 # Schema directory
 
-## Source of truth
+InsightAI loads table/column/FK metadata for NL→SQL from files produced by
+[django-db-schema-doc](https://pypi.org/project/django-db-schema-doc/).
 
-**`database_schema.md`** — full CampusMetrics MSSQL schema reference (~8,700 lines).
+## Export from your Django project
 
-Agents and SQL generation **must** use table and column names exactly as documented there.
+```bash
+python manage.py generate_database_doc -o DATABASE.md --project-name "Your product"
+python manage.py export_schema_json -o schema.json
+python manage.py export_schema_examples -o schema_examples.json   # optional
+```
 
-## Contents (high level)
+## Copy into InsightAI
 
-| Section | Description |
-|---------|-------------|
-| §1 | Purpose and conventions |
-| §2 | Domain overview, hub tables (`accounts_user`), join patterns |
-| §3 | Table of contents by domain |
-| §4 | Foreign key relationship index |
-| §5+ | Per-table definitions (columns, types, FKs) |
+| django-db-schema-doc output | InsightAI path (default) |
+|----------------------------|---------------------------|
+| `DATABASE.md` | `schema/database_schema.md` |
+| `schema.json` | `schema/schema.json` |
+| `schema_examples.json` | `schema/schema_examples.json` |
 
-## Phase 2
+## Configuration (`.env`)
 
-A parser will build structured metadata (JSON/Python models) from this markdown for:
+```bash
+# auto = use schema.json when the file exists, else DATABASE.md
+INSIGHTAI_SCHEMA_SOURCE=auto
+INSIGHTAI_SCHEMA_MARKDOWN_PATH=schema/database_schema.md
+INSIGHTAI_SCHEMA_JSON_PATH=schema/schema.json
+INSIGHTAI_SCHEMA_EXAMPLES_JSON_PATH=schema/schema_examples.json
+```
 
-- Relevant table retrieval
-- Schema context injection into prompts
-- Relationship-aware JOIN suggestions
+Re-run exports after migrations. Restart the API (or clear the schema cache in tests) so
+the registry reloads.
 
-Until Phase 2 ships, read this file directly or grep by table name.
+## Context builder
+
+The built-in builder is **schema-driven** (table names, domains, columns, FKs, query examples).
+Swap schema files per deployment (Budget, education, etc.) — no per-customer Python required.
+
+Optional extended heuristics: `context/plugins/` + `INSIGHTAI_SCHEMA_CONTEXT_PLUGIN` (see `context/README.md`).
+
+Put product-specific SQL rules in `Knowledge/`, not in plugins, when possible.
+
+## Legacy markdown
+
+Older InsightAI deployments may still use a hand-maintained `database_schema.md` (MSSQL-style
+sections `## 2. Domain overview`, `### 2.3 Common join patterns`). The parser auto-detects
+legacy vs django-db-schema-doc layout.
+
+## Tests
+
+Anonymized mini fixtures live under `tests/fixtures/schema/` (`django_doc_mini.json` / `.md`).

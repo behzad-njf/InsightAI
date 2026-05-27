@@ -2,6 +2,7 @@
 
 from insightai.domain.ports.ai_framework import IAIFramework
 from insightai.domain.ports.ask_pipeline import IAskPipeline
+from insightai.domain.ports.explainability_builder import IExplainabilityBuilder
 from insightai.domain.ports.database import (
     IDatabaseConnectionFactory,
     IDatabaseHealthCheck,
@@ -13,6 +14,7 @@ from insightai.domain.ports.sql_generator import ISQLGenerator
 from insightai.domain.ports.sql_safety import ISQLSafetyValidator
 
 __all__ = [
+    "IExplainabilityBuilder",
     "IAskPipeline",
     "IAIFramework",
     "IDatabaseConnectionFactory",

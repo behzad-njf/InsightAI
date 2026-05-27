@@ -34,6 +34,10 @@ def test_ask_success(ask_api_client: TestClient) -> None:
     assert data["timeout_seconds"] == 120
     assert data["sql_usage"]["total_tokens"] == 30
     assert data["answer_usage"]["total_tokens"] == 40
+    assert data["explainability"] is not None
+    assert data["explainability"]["route"] == "sql"
+    assert data["explainability"]["generation_source"] == data["generation_source"]
+    assert isinstance(data["explainability"]["referenced_tables"], list)
 
 
 def test_ask_validation_error(ask_api_client: TestClient) -> None:

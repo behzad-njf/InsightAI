@@ -21,6 +21,7 @@ from insightai.domain.models.database import (
     QueryResult,
 )
 from insightai.domain.models.query_execution import RunQueryResult, RunQuerySQLSource
+from insightai.domain.models.hybrid import QueryRouteKind
 from insightai.domain.models.schema import SchemaContextResult
 from insightai.domain.models.sql_generation import (
     GenerateSQLResult,
@@ -100,6 +101,8 @@ async def test_ask_runs_sql_execute_answer_in_order(ask_use_case: AskUseCase) ->
     assert result.timings.sql_generation_ms >= 0
     assert result.timings.query_execution_ms >= 0
     assert result.timings.answer_generation_ms >= 0
+    assert result.explainability is not None
+    assert result.explainability.route == QueryRouteKind.SQL
 
     ask_use_case._generate_sql.execute.assert_awaited_once()  # type: ignore[attr-defined]
     ask_use_case._run_query.execute.assert_awaited_once()  # type: ignore[attr-defined]
@@ -149,6 +152,7 @@ async def test_ask_execute_stream_emits_status_tokens_and_done(
     assert events[7].result is not None
     assert events[7].result.answer.answer.answer == "One row returned."
     assert events[7].result.timings.total_ms >= 0
+    assert events[7].result.explainability is not None
 
 
 @pytest.mark.asyncio

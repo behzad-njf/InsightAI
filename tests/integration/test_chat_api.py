@@ -20,6 +20,9 @@ def test_chat_returns_answer(ask_api_client) -> None:
     assert "request_id" in data
     assert response.headers.get("X-Request-ID") == data["request_id"]
     assert data["timings"]["total_ms"] >= 0
+    assert data["explainability"] is not None
+    assert data["explainability"]["route"] in {"sql", "rag", "both"}
+    assert data["explainability"]["generation_source"] == data["generation_source"]
 
 
 def test_chat_include_sql_and_data(ask_api_client) -> None:
@@ -36,6 +39,8 @@ def test_chat_include_sql_and_data(ask_api_client) -> None:
     assert data["sql"].upper().startswith("SELECT")
     assert data["data"]["row_count"] == 2
     assert "classroom_id" in data["data"]["columns"]
+    assert data["explainability"] is not None
+    assert data["explainability"]["generation_source"] == data["generation_source"]
 
 
 def test_chat_question_too_long(ask_api_client) -> None:

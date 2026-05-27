@@ -3,10 +3,15 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 
 from insightai.api.schemas.chat import ChatRequest, chat_stream_event_to_sse
 from insightai.api.sse import format_sse
-from insightai.domain.models.ask import AskStreamEvent, AskStreamPhase
+from insightai.domain.models.answer import AnswerGenerationResult, GenerateAnswerResult
+from insightai.domain.models.ask import AskResult, AskStreamEvent, AskStreamPhase, AskTimings
+from insightai.domain.models.database import QueryColumn, QueryResult
+from insightai.domain.models.explainability import ExplainabilityPayload
+from insightai.domain.models.hybrid import QueryRouteKind
 
 
 def test_format_sse_includes_event_and_json_data() -> None:
@@ -44,3 +49,37 @@ def test_chat_stream_error_event_mapping() -> None:
     assert event_name == "error"
     assert data["error_message"] == "bad"
     assert data["error_code"] == "sql_generation_error"
+
+
+def test_chat_stream_done_includes_explainability_payload() -> None:
+    answer = GenerateAnswerResult(
+        question="q",
+        sql="SELECT 1",
+        query_result=QueryResult(
+            columns=[QueryColumn(name="n")],
+            rows=[{"n": 1}],
+            row_count=1,
+            executed_at=datetime.now(UTC),
+            truncated=False,
+        ),
+        answer=AnswerGenerationResult(answer="ok", row_count=1, truncation_noted=False),
+    )
+    result = AskResult(
+        question="q",
+        route=QueryRouteKind.SQL,
+        answer=answer,
+        timings=AskTimings(
+            sql_generation_ms=1.0,
+            query_execution_ms=1.0,
+            answer_generation_ms=1.0,
+            total_ms=3.0,
+        ),
+        explainability=ExplainabilityPayload(question="q", route=QueryRouteKind.SQL),
+    )
+    event_name, data = chat_stream_event_to_sse(
+        AskStreamEvent.done(result),
+        request=ChatRequest(question="q"),
+    )
+    assert event_name == "done"
+    assert data["explainability"] is not None
+    assert data["explainability"]["route"] == "sql"
